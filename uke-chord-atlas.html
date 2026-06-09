@@ -1,53 +1,104 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="light">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Uke Chord Atlas — Drone Edition</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/htmx/2.0.3/htmx.min.js"></script>
+<meta name="color-scheme" content="light dark">
+<meta name="description" content="A soundless reference for ukulele chord voicings across all 12 keys (GCEA tuning).">
+<title>Uke Chord Atlas</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&family=Special+Elite&display=swap" rel="stylesheet">
+<script>
+  // Resolve theme before first paint to avoid a flash of the wrong theme.
+  (function () {
+    try {
+      const saved = localStorage.getItem('uca-theme');
+      const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+      const theme = saved || (prefersDark ? 'dark' : 'light');
+      document.documentElement.setAttribute('data-theme', theme);
+    } catch (e) { /* localStorage may be unavailable */ }
+  })();
+</script>
 <style>
   :root {
-    --ink: #1a1209;
-    --paper: #f0e8d0;
-    --paper-dark: #e0d4b0;
-    --aged: #c8a870;
-    --rust: #8b3a1c;
-    --drone-active: #5a1a02;
-    --faint: rgba(26,18,9,0.15);
-    --string-col: rgba(26,18,9,0.35);
+    --bg: #15100a;
+    --surface: #f0e8d0;
+    --surface-2: #e0d4b0;
+    --surface-3: #e8dcc0;
+    --text: #1a1209;
+    --text-muted: #8a6a35;
+    --border: #c8a870;
+    --accent: #8b3a1c;
+    --accent-text: #f0e8d0;
+    --focus: #2f6585;
+
+    --diagram-bg: #f4ead2;
+    --diagram-bg-active: #e6d2a8;
+    --diagram-line: rgba(139,115,70,0.12);
+    --diagram-strong: #4a3520;
+    --diagram-fret: rgba(74,53,32,0.25);
+    --diagram-string: rgba(74,53,32,0.5);
+    --diagram-dot: #3a2510;
+    --diagram-dot-text: #f4ead2;
+    --diagram-open: #2f6585;
+    --diagram-muted-text: #7a6232;
+  }
+
+  [data-theme="dark"] {
+    --bg: #0d0b09;
+    --surface: #1c1813;
+    --surface-2: #262019;
+    --surface-3: #221d16;
+    --text: #ece2cc;
+    --text-muted: #c2a76e;
+    --border: #4a3d28;
+    --accent: #e08a56;
+    --accent-text: #1c1813;
+    --focus: #8fc0df;
+
+    --diagram-bg: #221c14;
+    --diagram-bg-active: #342818;
+    --diagram-line: rgba(200,170,110,0.10);
+    --diagram-strong: #c7ad7a;
+    --diagram-fret: rgba(200,170,110,0.32);
+    --diagram-string: rgba(200,170,110,0.58);
+    --diagram-dot: #e6cf95;
+    --diagram-dot-text: #221c14;
+    --diagram-open: #8fc0df;
+    --diagram-muted-text: #c2a76e;
   }
 
   * { box-sizing: border-box; margin: 0; padding: 0; }
 
   body {
-    background: var(--ink);
+    background: var(--bg);
     font-family: 'Libre Baskerville', Georgia, serif;
     min-height: 100vh;
-    padding: 0;
     overflow-x: hidden;
+    color: var(--text);
   }
 
-  /* Grain texture overlay */
+  /* Grain texture overlay (decorative) */
   body::before {
     content: '';
     position: fixed; inset: 0;
     background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
     pointer-events: none;
     z-index: 1000;
-    opacity: 0.6;
+    opacity: 0.5;
   }
 
   #app {
     max-width: 1100px;
     margin: 0 auto;
-    background: var(--paper);
+    background: var(--surface);
     min-height: 100vh;
     position: relative;
     box-shadow: 0 0 80px rgba(0,0,0,0.8);
   }
 
-  /* Aged paper edges */
+  /* Aged panel edges (decorative) */
   #app::before, #app::after {
     content: '';
     position: absolute;
@@ -55,6 +106,7 @@
     width: 8px;
     background: linear-gradient(to right, rgba(0,0,0,0.12), transparent);
     z-index: 2;
+    pointer-events: none;
   }
   #app::before { left: 0; }
   #app::after { right: 0; background: linear-gradient(to left, rgba(0,0,0,0.12), transparent); }
@@ -62,9 +114,9 @@
   /* Header */
   header {
     padding: 36px 40px 24px;
-    border-bottom: 2px solid var(--aged);
+    border-bottom: 2px solid var(--border);
     position: relative;
-    background: linear-gradient(to bottom, #e8dcc0, var(--paper));
+    background: linear-gradient(to bottom, var(--surface-3), var(--surface));
   }
 
   .header-top {
@@ -72,12 +124,13 @@
     align-items: baseline;
     gap: 16px;
     flex-wrap: wrap;
+    padding-right: 60px;
   }
 
   h1 {
     font-family: 'Special Elite', cursive;
     font-size: clamp(28px, 5vw, 48px);
-    color: var(--ink);
+    color: var(--text);
     letter-spacing: 2px;
     line-height: 1;
   }
@@ -85,32 +138,47 @@
   .subtitle {
     font-style: italic;
     font-size: 13px;
-    color: var(--aged);
+    color: var(--text-muted);
     letter-spacing: 1px;
   }
 
-  .drone-indicator {
+  /* Theme toggle */
+  .theme-toggle {
     position: absolute;
     top: 20px; right: 40px;
+    width: 44px; height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    line-height: 1;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    background: transparent;
+    color: var(--text);
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s;
+  }
+  .theme-toggle:hover { background: var(--surface-2); }
+  .theme-toggle .icon-dark { display: none; }
+  [data-theme="dark"] .theme-toggle .icon-light { display: none; }
+  [data-theme="dark"] .theme-toggle .icon-dark { display: inline; }
+
+  /* Selectors */
+  fieldset {
+    border: none;
+    margin: 0;
+    padding: 0;
+  }
+  legend {
     font-family: 'Special Elite', cursive;
     font-size: 11px;
     letter-spacing: 2px;
-    color: var(--aged);
     text-transform: uppercase;
-    opacity: 0;
-    transition: opacity 0.3s;
-  }
-  .drone-indicator.active {
-    opacity: 1;
-    color: var(--rust);
-    animation: pulse 2s infinite;
-  }
-  @keyframes pulse {
-    0%,100% { opacity: 1; }
-    50% { opacity: 0.5; }
+    color: var(--text-muted);
+    margin-bottom: 8px;
   }
 
-  /* Key selector */
   .key-row {
     display: flex;
     gap: 0;
@@ -121,22 +189,23 @@
   .key-btn {
     font-family: 'Special Elite', cursive;
     font-size: 16px;
-    padding: 8px 14px;
-    border: 1px solid var(--aged);
+    padding: 10px 14px;
+    min-height: 44px;
+    border: 1px solid var(--border);
     border-right: none;
     background: transparent;
-    color: var(--ink);
+    color: var(--text);
     cursor: pointer;
-    transition: all 0.1s;
+    transition: background 0.1s, color 0.1s;
     letter-spacing: 1px;
     position: relative;
   }
-  .key-btn:last-child { border-right: 1px solid var(--aged); }
-  .key-btn:hover { background: var(--paper-dark); }
-  .key-btn.active {
-    background: var(--ink);
-    color: var(--paper);
-    border-color: var(--ink);
+  .key-btn:last-child { border-right: 1px solid var(--border); }
+  .key-btn:hover { background: var(--surface-2); }
+  .key-btn[aria-pressed="true"] {
+    background: var(--text);
+    color: var(--surface);
+    border-color: var(--text);
     z-index: 1;
   }
 
@@ -145,45 +214,50 @@
     display: flex;
     gap: 6px;
     flex-wrap: wrap;
+    align-items: center;
     padding: 16px 40px;
-    background: var(--paper-dark);
-    border-bottom: 1px solid var(--aged);
+    background: var(--surface-2);
+    border-bottom: 1px solid var(--border);
+  }
+  .type-row legend {
+    width: 100%;
   }
 
   .type-btn {
     font-family: 'Special Elite', cursive;
-    font-size: 12px;
-    padding: 4px 10px;
-    border: 1px solid rgba(26,18,9,0.3);
+    font-size: 13px;
+    padding: 8px 12px;
+    min-height: 40px;
+    border: 1px solid var(--border);
     border-radius: 2px;
     background: transparent;
-    color: var(--ink);
+    color: var(--text);
     cursor: pointer;
-    transition: all 0.12s;
+    transition: background 0.12s, color 0.12s;
     letter-spacing: 0.5px;
   }
-  .type-btn:hover { background: rgba(26,18,9,0.08); }
-  .type-btn.active {
-    background: var(--rust);
-    color: var(--paper);
-    border-color: var(--rust);
+  .type-btn:hover { background: color-mix(in srgb, var(--text) 8%, transparent); }
+  .type-btn[aria-pressed="true"] {
+    background: var(--accent);
+    color: var(--accent-text);
+    border-color: var(--accent);
   }
 
   .mixed-btn {
     margin-left: auto;
     font-style: italic;
     border-style: dashed;
-    color: var(--rust);
-    border-color: var(--rust);
+    color: var(--accent);
+    border-color: var(--accent);
   }
-  .mixed-btn.active {
-    background: var(--rust);
-    color: var(--paper);
+  .mixed-btn[aria-pressed="true"] {
+    background: var(--accent);
+    color: var(--accent-text);
   }
 
   /* Content area */
   #chord-content {
-    padding: 28px 40px 60px;
+    padding: 28px 40px 80px;
     min-height: 400px;
   }
 
@@ -193,11 +267,11 @@
 
   .group-label {
     font-family: 'Special Elite', cursive;
-    font-size: 15px;
-    color: var(--ink);
+    font-size: 16px;
+    color: var(--text);
     letter-spacing: 3px;
     text-transform: uppercase;
-    border-bottom: 1px solid var(--aged);
+    border-bottom: 1px solid var(--border);
     padding-bottom: 6px;
     margin-bottom: 14px;
     display: flex;
@@ -206,9 +280,9 @@
   }
   .group-count {
     font-family: 'Libre Baskerville', serif;
-    font-size: 10px;
+    font-size: 11px;
     font-style: italic;
-    color: var(--aged);
+    color: var(--text-muted);
     font-weight: 400;
     letter-spacing: 1px;
     text-transform: lowercase;
@@ -225,69 +299,91 @@
     cursor: pointer;
     transition: transform 0.1s;
     position: relative;
+    padding: 0;
+    border: none;
+    background: transparent;
+    line-height: 0;
+    border-radius: 4px;
   }
   .chord-card:hover { transform: translateY(-2px); }
-  .chord-card.playing svg rect.card-bg { fill: #2a1005; }
-  .chord-card.playing { filter: drop-shadow(0 0 8px rgba(139,58,28,0.6)); }
+  .chord-card[aria-pressed="true"] { filter: drop-shadow(0 0 8px color-mix(in srgb, var(--accent) 60%, transparent)); }
+  .chord-card[aria-pressed="true"] svg rect.d-bg { fill: var(--diagram-bg-active); }
+
+  /* Diagram theming via classes */
+  .chord-card svg rect.d-bg { fill: var(--diagram-bg); }
+  .chord-card svg .d-paper-line { stroke: var(--diagram-line); }
+  .chord-card svg .d-nut { fill: var(--diagram-strong); }
+  .chord-card svg .d-fret { stroke: var(--diagram-fret); }
+  .chord-card svg .d-string { stroke: var(--diagram-string); }
+  .chord-card svg .d-pos { fill: var(--diagram-muted-text); }
+  .chord-card svg .d-label { fill: var(--diagram-muted-text); }
+  .chord-card svg .d-open { fill: none; stroke: var(--diagram-open); }
+  .chord-card svg .d-open-text { fill: var(--diagram-open); }
+  .chord-card svg .d-dot { fill: var(--diagram-dot); }
+  .chord-card svg .d-dot-text { fill: var(--diagram-dot-text); }
+  .chord-card.mixed svg .d-open { stroke: var(--accent); }
+  .chord-card.mixed svg .d-open-text { fill: var(--accent); }
+  .chord-card.mixed svg .d-dot { fill: var(--accent); }
 
   /* Empty state */
   .empty {
     font-style: italic;
-    color: var(--aged);
-    font-size: 14px;
+    color: var(--text-muted);
+    font-size: 15px;
     padding: 40px 0;
     text-align: center;
   }
 
-  /* Stop button */
-  #stop-btn {
-    position: fixed;
-    bottom: 24px;
-    right: 24px;
-    font-family: 'Special Elite', cursive;
-    font-size: 13px;
-    padding: 10px 20px;
-    background: var(--rust);
-    color: var(--paper);
-    border: none;
-    border-radius: 2px;
-    cursor: pointer;
-    letter-spacing: 2px;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.4);
-    opacity: 0;
-    transform: translateY(10px);
-    transition: all 0.2s;
-    pointer-events: none;
-  }
-  #stop-btn.visible {
-    opacity: 1;
-    transform: translateY(0);
-    pointer-events: all;
-  }
-
-  /* Info strip */
+  /* Detail strip */
   .info-strip {
     position: fixed;
     bottom: 0; left: 50%;
-    transform: translateX(-50%);
-    background: var(--ink);
-    color: var(--aged);
-    font-size: 10px;
+    transform: translateX(-50%) translateY(100%);
+    background: var(--text);
+    color: var(--surface);
+    font-size: 12px;
     font-family: 'Special Elite', cursive;
     letter-spacing: 2px;
-    padding: 4px 20px;
-    opacity: 0;
-    transition: opacity 0.3s;
+    padding: 8px 22px;
+    transition: transform 0.25s;
     white-space: nowrap;
-    pointer-events: none;
+    max-width: 92vw;
+    overflow: hidden;
+    text-overflow: ellipsis;
     z-index: 100;
+    border-radius: 4px 4px 0 0;
   }
-  .info-strip.show { opacity: 1; }
+  .info-strip.show { transform: translateX(-50%) translateY(0); }
+
+  /* Visible focus for keyboard users */
+  :focus-visible {
+    outline: 3px solid var(--focus);
+    outline-offset: 2px;
+  }
+
+  .visually-hidden {
+    position: absolute;
+    width: 1px; height: 1px;
+    padding: 0; margin: -1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+    border: 0;
+  }
 
   @media (max-width: 600px) {
-    header, #chord-content { padding-left: 16px; padding-right: 16px; }
+    header { padding: 24px 16px 20px; }
+    .header-top { padding-right: 52px; }
+    .theme-toggle { top: 16px; right: 16px; }
+    #chord-content { padding: 20px 16px 80px; }
     .type-row { padding: 12px 16px; }
-    h1 { font-size: 28px; }
+    h1 { font-size: 30px; }
+    .key-btn { font-size: 15px; padding: 10px 12px; }
+    .voicings-grid { justify-content: space-between; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { transition: none !important; animation: none !important; }
   }
 </style>
 </head>
@@ -297,27 +393,33 @@
   <header>
     <div class="header-top">
       <h1>Uke Chord Atlas</h1>
-      <span class="subtitle">all keys · all voicings · drone edition · GCEA</span>
+      <span class="subtitle">all keys · all voicings · GCEA</span>
     </div>
-    <div class="drone-indicator" id="drone-indicator">◉ drone sounding</div>
+    <button type="button" class="theme-toggle" id="theme-toggle" aria-label="Switch to dark theme">
+      <span class="icon-light" aria-hidden="true">☾</span>
+      <span class="icon-dark" aria-hidden="true">☀</span>
+    </button>
 
-    <div class="key-row" id="key-row">
-      <!-- filled by JS -->
-    </div>
+    <fieldset class="key-fieldset">
+      <legend>Key</legend>
+      <div class="key-row" id="key-row" role="group" aria-label="Select key">
+        <!-- filled by JS -->
+      </div>
+    </fieldset>
   </header>
 
-  <div class="type-row" id="type-row">
+  <fieldset class="type-row" id="type-row">
+    <legend>Chord type</legend>
     <!-- filled by JS -->
-  </div>
+  </fieldset>
 
-  <div id="chord-content">
+  <main id="chord-content" aria-live="polite">
     <div class="empty">Select a key above to begin.</div>
-  </div>
+  </main>
 
 </div>
 
-<button id="stop-btn" onclick="stopAll()">■ STOP</button>
-<div class="info-strip" id="info-strip"></div>
+<div class="info-strip" id="info-strip" role="status" aria-live="polite"></div>
 
 <script>
 // ═══════════════════════════════════════════════════════════
@@ -385,9 +487,15 @@ function generateVoicings(root) {
     if (!ivs.has(0)) continue;
 
     for (const ct of CHORD_TYPES) {
-      const req = new Set(ct.tones);
-      if (![...req].every(r=>ivs.has(r))) continue;
-      const allOk = notes.every(n => req.has(((n-root)+12)%12));
+      const full = new Set(ct.tones);
+      // A 4-string uke can sound at most 4 distinct tones. For extended
+      // chords the perfect 5th is the conventional omission, so it becomes
+      // optional while every other chord tone stays required.
+      const required = ct.tones.length > 4
+        ? new Set(ct.tones.filter(t => t !== 7))
+        : full;
+      if (![...required].every(r=>ivs.has(r))) continue;
+      const allOk = notes.every(n => full.has(((n-root)+12)%12));
       if (!allOk) continue;
       const key = ct.id + ":" + frets.join(",");
       if (seen.has(key)) continue;
@@ -421,43 +529,43 @@ function chordSVG(frets, noteNamesArr, root, mixed) {
   const startFret=minFret>1?minFret:1;
   const showNut=startFret===1;
 
-  let s = `<svg width="${W}" height="${H}" xmlns="http://www.w3.org/2000/svg">`;
+  let s = `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">`;
 
   // bg
-  s += `<rect class="card-bg" x="0" y="0" width="${W}" height="${H}" rx="3" fill="#f4ead2"/>`;
+  s += `<rect class="d-bg" x="0" y="0" width="${W}" height="${H}" rx="3"/>`;
 
   // aged paper lines
   for (let i=0;i<3;i++) {
-    s += `<line x1="0" y1="${tm+18+i*22}" x2="${W}" y2="${tm+18+i*22}" stroke="rgba(139,115,70,0.12)" stroke-width="0.5"/>`;
+    s += `<line class="d-paper-line" x1="0" y1="${tm+18+i*22}" x2="${W}" y2="${tm+18+i*22}" stroke-width="0.5"/>`;
   }
 
   // Fret position marker
   if (startFret>1) {
-    s += `<text x="${lm-3}" y="${tm+fs*0.65}" text-anchor="end" font-size="8" fill="#8b7244" font-family="'Special Elite',serif">${startFret}</text>`;
+    s += `<text class="d-pos" x="${lm-3}" y="${tm+fs*0.65}" text-anchor="end" font-size="8" font-family="'Special Elite',serif">${startFret}</text>`;
   }
 
   // Nut
   if (showNut) {
-    s += `<rect x="${lm-1}" y="${tm-4}" width="${gw+2}" height="4" rx="1" fill="#4a3520"/>`;
+    s += `<rect class="d-nut" x="${lm-1}" y="${tm-4}" width="${gw+2}" height="4" rx="1"/>`;
   }
 
   // Fret lines
   for (let fi=0;fi<=FRETS_SHOWN;fi++) {
     if (fi===0 && showNut) continue;
-    s += `<line x1="${lm}" y1="${tm+fi*fs}" x2="${lm+gw}" y2="${tm+fi*fs}" stroke="rgba(74,53,32,0.25)" stroke-width="0.8"/>`;
+    s += `<line class="d-fret" x1="${lm}" y1="${tm+fi*fs}" x2="${lm+gw}" y2="${tm+fi*fs}" stroke-width="0.8"/>`;
   }
 
   // Strings
   for (let si=0;si<STRINGS;si++) {
-    s += `<line x1="${lm+si*ss}" y1="${tm}" x2="${lm+si*ss}" y2="${tm+gh}" stroke="rgba(74,53,32,0.5)" stroke-width="${1+si*0.15}"/>`;
+    s += `<line class="d-string" x1="${lm+si*ss}" y1="${tm}" x2="${lm+si*ss}" y2="${tm+gh}" stroke-width="${1+si*0.15}"/>`;
   }
 
   // Open circles
   frets.forEach((f,si) => {
     if (f!==0) return;
     const cx=lm+si*ss, cy=tm-10;
-    s += `<circle cx="${cx}" cy="${cy}" r="5" fill="none" stroke="${mixed?'#8b3a1c':'#4a7a9b'}" stroke-width="1.5"/>`;
-    s += `<text x="${cx}" y="${cy+3.5}" text-anchor="middle" font-size="5.5" fill="${mixed?'#8b3a1c':'#4a7a9b'}" font-weight="bold" font-family="monospace">${noteNamesArr[si]}</text>`;
+    s += `<circle class="d-open" cx="${cx}" cy="${cy}" r="5" stroke-width="1.5"/>`;
+    s += `<text class="d-open-text" x="${cx}" y="${cy+3.5}" text-anchor="middle" font-size="5.5" font-weight="bold" font-family="monospace">${noteNamesArr[si]}</text>`;
   });
 
   // Finger dots
@@ -466,168 +574,64 @@ function chordSVG(frets, noteNamesArr, root, mixed) {
     const fr=f-startFret+1;
     const cy=tm+(fr-0.5)*fs;
     const cx=lm+si*ss;
-    s += `<circle cx="${cx}" cy="${cy}" r="${fs*0.38}" fill="${mixed?'#8b3a1c':'#3a2510'}"/>`;
-    s += `<text x="${cx}" y="${cy+3}" text-anchor="middle" font-size="6" fill="${mixed?'#f4ead2':'#f4ead2'}" font-weight="bold" font-family="monospace">${noteNamesArr[si]}</text>`;
+    s += `<circle class="d-dot" cx="${cx}" cy="${cy}" r="${fs*0.38}"/>`;
+    s += `<text class="d-dot-text" x="${cx}" y="${cy+3}" text-anchor="middle" font-size="6" font-weight="bold" font-family="monospace">${noteNamesArr[si]}</text>`;
   });
 
   // String labels
   STRING_NAMES_UKE.forEach((sn,si) => {
-    s += `<text x="${lm+si*ss}" y="${H-2}" text-anchor="middle" font-size="7" fill="#8b7244" font-family="'Libre Baskerville',serif">${sn}</text>`;
+    s += `<text class="d-label" x="${lm+si*ss}" y="${H-2}" text-anchor="middle" font-size="7" font-family="'Libre Baskerville',serif">${sn}</text>`;
   });
 
   s += `</svg>`;
   return s;
 }
 
+// Build a spoken-friendly description of a voicing for screen readers.
+function voicingAriaLabel(grpLabel, noteNamesArr, frets) {
+  const fingering = frets.map((f, si) => {
+    const str = STRING_NAMES_UKE[si];
+    return f === 0 ? `${str} open` : `${str} fret ${f}`;
+  }).join(', ');
+  return `${grpLabel} voicing. Notes ${noteNamesArr.join(', ')}. Fingering ${fingering}.`;
+}
+
 // ═══════════════════════════════════════════════════════════
-// AUDIO ENGINE
+// SELECTION / DETAIL STRIP
 // ═══════════════════════════════════════════════════════════
 
-let audioCtx = null;
-let activeNodes = [];
 let currentCard = null;
 
-function getAudioCtx() {
-  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-  if (audioCtx.state === 'suspended') audioCtx.resume();
-  return audioCtx;
-}
-
-// Frequency for a note at a given fret on a given string
-// GCEA: G4=392Hz, C4=261.63Hz, E4=329.63Hz, A4=440Hz
-const STRING_BASE_FREQS = [392.00, 261.63, 329.63, 440.00];
-
-function fretFreq(str, fret) {
-  return STRING_BASE_FREQS[str] * Math.pow(2, fret/12);
-}
-
-// Drone sound: mix of sine + triangle for each string
-// Slight vibrato, slightly detuned harmonics — like a resonating open instrument
-function playDrone(frets, noteNamesArr, cardEl) {
-  stopAll();
+function selectCard(cardEl, noteNamesArr, frets) {
+  if (currentCard === cardEl) {
+    clearSelection();
+    return;
+  }
+  if (currentCard) currentCard.setAttribute('aria-pressed', 'false');
   currentCard = cardEl;
-  cardEl.classList.add('playing');
+  cardEl.setAttribute('aria-pressed', 'true');
 
-  const ctx = getAudioCtx();
-  const masterGain = ctx.createGain();
-  masterGain.gain.setValueAtTime(0, ctx.currentTime);
-  masterGain.gain.linearRampToValueAtTime(0.55, ctx.currentTime + 0.4);
-  masterGain.connect(ctx.destination);
-
-  // Reverb via convolver approximation (simple delay network)
-  const convolver = ctx.createConvolver();
-  const bufLen = ctx.sampleRate * 2.5;
-  const impulse = ctx.createBuffer(2, bufLen, ctx.sampleRate);
-  for (let ch=0;ch<2;ch++) {
-    const d = impulse.getChannelData(ch);
-    for (let i=0;i<bufLen;i++) {
-      d[i] = (Math.random()*2-1) * Math.pow(1-i/bufLen, 2.2);
-    }
-  }
-  convolver.buffer = impulse;
-  const wetGain = ctx.createGain();
-  wetGain.gain.value = 0.25;
-  masterGain.connect(convolver);
-  convolver.connect(wetGain);
-  wetGain.connect(ctx.destination);
-
-  // Compressor for warmth
-  const comp = ctx.createDynamicsCompressor();
-  comp.threshold.value = -18;
-  comp.knee.value = 8;
-  comp.ratio.value = 3;
-  comp.attack.value = 0.01;
-  comp.release.value = 0.3;
-  comp.connect(masterGain);
-
-  activeNodes.push(masterGain, wetGain, comp);
-
-  frets.forEach((fret, si) => {
-    if (fret < 0) return; // muted
-    const freq = fretFreq(si, fret);
-
-    // Each string: sine + triangle + slight harmonics
-    const waveTypes = ['sine', 'triangle'];
-    waveTypes.forEach((type, wi) => {
-      const osc = ctx.createOscillator();
-      osc.type = type;
-      // Slight per-string detuning for that drone resonance
-      const detune = (si * 1.3) + (wi * 0.7) + (Math.random() * 0.5 - 0.25);
-      osc.frequency.value = freq * (wi===0 ? 1 : 2); // triangle at octave for body
-      osc.detune.value = detune;
-
-      // Vibrato
-      const vibratoOsc = ctx.createOscillator();
-      vibratoOsc.type = 'sine';
-      vibratoOsc.frequency.value = 4.5 + si * 0.3; // slight difference per string
-      const vibratoGain = ctx.createGain();
-      vibratoGain.gain.value = 2.5;
-      vibratoOsc.connect(vibratoGain);
-      vibratoGain.connect(osc.detune);
-
-      const strGain = ctx.createGain();
-      // Triangle/harmonic is quieter; strings balance
-      const baseVol = wi===0 ? 0.18 : 0.06;
-      // Open strings ring slightly louder
-      const openBoost = fret===0 ? 1.3 : 1.0;
-      strGain.gain.value = baseVol * openBoost;
-      strGain.connect(comp);
-
-      osc.connect(strGain);
-      osc.start();
-      vibratoOsc.start();
-
-      activeNodes.push(osc, vibratoOsc, vibratoGain, strGain);
-    });
-
-    // Pluck attack: brief sharper transient
-    const pluck = ctx.createOscillator();
-    pluck.type = 'sawtooth';
-    pluck.frequency.value = freq * 2;
-    const pluckGain = ctx.createGain();
-    pluckGain.gain.setValueAtTime(0.08, ctx.currentTime);
-    pluckGain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.3 + si*0.04);
-    pluck.connect(pluckGain);
-    pluckGain.connect(comp);
-    pluck.start();
-    pluck.stop(ctx.currentTime + 0.35);
-    activeNodes.push(pluck, pluckGain);
-  });
-
-  document.getElementById('stop-btn').classList.add('visible');
-  document.getElementById('drone-indicator').classList.add('active');
-
-  // Show note info
-  showInfo(noteNamesArr);
+  const fingering = frets.map((f, si) => `${STRING_NAMES_UKE[si]}${f}`).join(' ');
+  showInfo(`${noteNamesArr.join(' · ')}  —  ${fingering}`);
 }
 
-function stopAll() {
-  const ctx = audioCtx;
-  if (ctx) {
-    activeNodes.forEach(n => {
-      try {
-        if (n.gain) {
-          n.gain.linearRampToValueAtTime(0, ctx.currentTime + 0.4);
-        } else if (n.stop) {
-          n.stop(ctx.currentTime + 0.4);
-        }
-      } catch(e) {}
-    });
+function clearSelection() {
+  if (currentCard) {
+    currentCard.setAttribute('aria-pressed', 'false');
+    currentCard = null;
   }
-  activeNodes = [];
-  if (currentCard) { currentCard.classList.remove('playing'); currentCard = null; }
-  document.getElementById('stop-btn').classList.remove('visible');
-  document.getElementById('drone-indicator').classList.remove('active');
   hideInfo();
 }
 
-function showInfo(noteNamesArr) {
+function showInfo(text) {
   const strip = document.getElementById('info-strip');
-  strip.textContent = noteNamesArr.join(' · ');
+  strip.textContent = text;
   strip.classList.add('show');
 }
 function hideInfo() {
-  document.getElementById('info-strip').classList.remove('show');
+  const strip = document.getElementById('info-strip');
+  strip.classList.remove('show');
+  strip.textContent = '';
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -651,8 +655,8 @@ let state = {
 function renderKeys() {
   const row = document.getElementById('key-row');
   row.innerHTML = KEYS.map(k => `
-    <button class="key-btn${state.root===k.root?' active':''}"
-      onclick="selectKey(${k.root})">${k.label}</button>
+    <button type="button" class="key-btn" aria-pressed="${state.root===k.root}"
+      data-root="${k.root}">${k.label}</button>
   `).join('');
 }
 
@@ -663,18 +667,20 @@ function renderTypes() {
     {id:"all", label:"All"},
     ...CHORD_TYPES.map(ct => ({id:ct.id, label:ct.label}))
   ];
-  row.innerHTML = types.map(t => `
-    <button class="type-btn${state.type===t.id?' active':''}"
-      onclick="selectType('${t.id}')">${t.label}</button>
+  row.innerHTML = `<legend>Chord type</legend>` + types.map(t => `
+    <button type="button" class="type-btn" aria-pressed="${state.type===t.id}"
+      data-type="${t.id}">${t.label}</button>
   `).join('') + `
-    <button class="type-btn mixed-btn${state.mixedOnly?' active':''}"
-      onclick="toggleMixed()">★ open mid-neck</button>
+    <button type="button" class="type-btn mixed-btn" aria-pressed="${state.mixedOnly}"
+      data-mixed="true">★ open mid-neck</button>
   `;
 }
 
 // Render chord content
 function renderContent() {
   const content = document.getElementById('chord-content');
+  clearSelection();
+
   if (state.root === null) {
     content.innerHTML = `<div class="empty">Select a key above to begin.</div>`;
     return;
@@ -694,7 +700,7 @@ function renderContent() {
   }
 
   // Sort by position
-  voicings.sort((a,b) => {
+  voicings = voicings.slice().sort((a,b) => {
     const pa = a.frets.filter(f=>f>0);
     const pb = b.frets.filter(f=>f>0);
     const posA = pa.length>0?Math.min(...pa):0;
@@ -720,16 +726,19 @@ function renderContent() {
     html += `<div class="chord-group">`;
     html += `<div class="group-label">${grpLabel} <span class="group-count">${vs.length} voicing${vs.length!==1?'s':''}</span></div>`;
     html += `<div class="voicings-grid">`;
-    vs.forEach((v,i) => {
+    vs.forEach((v) => {
       const mixed = isMixed(v.frets);
       const noteNamesArr = v.notes.map(n => noteName(n, root));
       const svg = chordSVG(v.frets, noteNamesArr, root, mixed);
-      const freqData = JSON.stringify(v.frets);
+      const fretData = JSON.stringify(v.frets);
       const noteData = JSON.stringify(noteNamesArr);
-      html += `<div class="chord-card${mixed?' mixed':''}" 
-        onclick="handleCardClick(this, ${freqData}, ${noteData})"
+      const ariaLabel = voicingAriaLabel(grpLabel, noteNamesArr, v.frets);
+      html += `<button type="button" class="chord-card${mixed?' mixed':''}"
+        aria-pressed="false"
+        aria-label="${ariaLabel}"
+        data-frets='${fretData}' data-notes='${noteData}'
         title="${noteNamesArr.join('-')} | frets: ${v.frets.join('-')}"
-      >${svg}</div>`;
+      >${svg}</button>`;
     });
     html += `</div></div>`;
   }
@@ -742,10 +751,7 @@ function rootNoteName(root) {
   return NOTE_NAMES[root];
 }
 
-// ─── HTMX-style dynamic swap using hx-swap-oob equivalent
-// We simulate HTMX partial updates by targeting specific elements
 function selectKey(root) {
-  stopAll();
   state.root = root;
   renderKeys();
   renderContent();
@@ -763,30 +769,64 @@ function toggleMixed() {
   renderContent();
 }
 
-function handleCardClick(cardEl, frets, noteNamesArr) {
-  if (cardEl.classList.contains('playing')) {
-    stopAll();
-    return;
-  }
-  playDrone(frets, noteNamesArr, cardEl);
+// ═══════════════════════════════════════════════════════════
+// THEME
+// ═══════════════════════════════════════════════════════════
+
+function currentTheme() {
+  return document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light';
 }
 
-// ─── HTMX integration: intercept requests and handle locally
-// We use htmx's event system to hook into our state
+function applyTheme(theme) {
+  document.documentElement.setAttribute('data-theme', theme);
+  const toggle = document.getElementById('theme-toggle');
+  toggle.setAttribute('aria-label', theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme');
+  try { localStorage.setItem('uca-theme', theme); } catch (e) { /* ignore */ }
+}
+
+function toggleTheme() {
+  applyTheme(currentTheme() === 'dark' ? 'light' : 'dark');
+}
+
+// ═══════════════════════════════════════════════════════════
+// EVENT WIRING
+// ═══════════════════════════════════════════════════════════
+
 document.addEventListener('DOMContentLoaded', () => {
   renderKeys();
   renderTypes();
   renderContent();
+  applyTheme(currentTheme());
 
-  // Precompute a few common keys in background
+  document.getElementById('theme-toggle').addEventListener('click', toggleTheme);
+
+  document.getElementById('key-row').addEventListener('click', e => {
+    const btn = e.target.closest('.key-btn');
+    if (btn) selectKey(Number(btn.dataset.root));
+  });
+
+  document.getElementById('type-row').addEventListener('click', e => {
+    const btn = e.target.closest('button');
+    if (!btn) return;
+    if (btn.dataset.mixed) { toggleMixed(); return; }
+    if (btn.dataset.type) selectType(btn.dataset.type);
+  });
+
+  document.getElementById('chord-content').addEventListener('click', e => {
+    const card = e.target.closest('.chord-card');
+    if (!card) return;
+    selectCard(card, JSON.parse(card.dataset.notes), JSON.parse(card.dataset.frets));
+  });
+
+  // Precompute a few common keys in the background
   setTimeout(() => {
     [0,2,5,7,9].forEach(r => getVoicings(r));
   }, 500);
 });
 
-// Keyboard shortcut: Escape to stop
+// Keyboard shortcut: Escape clears the current selection
 document.addEventListener('keydown', e => {
-  if (e.key === 'Escape') stopAll();
+  if (e.key === 'Escape') clearSelection();
 });
 </script>
 

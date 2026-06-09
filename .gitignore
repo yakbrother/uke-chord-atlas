@@ -1,0 +1,7 @@
+# Local archives / backups
+*.tar
+*.tar.gz
+*.zip
+
+# OS cruft
+.DS_Store

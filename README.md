@@ -1,42 +1,34 @@
-# Uke Chord Atlas — Drone Edition
+# Uke Chord Atlas
 
-A standalone HTML app for exploring ukulele chord voicings across all 12 keys, with drone audio playback.
+A standalone, single-file HTML app for exploring ukulele chord voicings across all 12 keys in GCEA standard tuning. No sound, no build step, no server — just open it.
 
 ## Features
 
 - All 12 keys × 16 chord types (maj, min, sus2, sus4, add9, 6, 6/9, 7, maj7, 9, maj9, m7, m(maj7), m9, 7sus4, add11)
 - Every playable voicing up to fret 12, max 4-fret span
-- **Drone playback** — click any chord diagram to hear it sustained (sine + triangle layers, vibrato, room reverb)
+- Extended chords (9, maj9, m9, 6/9) are voiced with the perfect 5th omitted, since a 4-string uke can sound at most four distinct notes
 - **Open mid-neck filter** — isolates voicings that mix open strings with fretted notes higher up the neck
-- GCEA standard tuning
-- Zero dependencies except HTMX (loaded from CDN) and Google Fonts
+- **Light and dark themes** — follows your system preference and remembers your choice
+- **Mobile-friendly and keyboard-accessible** — real buttons, ARIA labels, visible focus, and reduced-motion support
+- Zero runtime dependencies (Google Fonts loaded from CDN purely for styling, with serif fallbacks)
 
 ## Usage
 
 Open `uke-chord-atlas.html` directly in any modern browser. No server required.
 
-- Select a key → select a chord type → click a diagram to drone it
-- Click again or press **Escape** to stop
-- Use the **★ open mid-neck** button to find those resonant hybrid voicings
+- Select a key → select a chord type → click (or tap) a diagram to see its notes and fingering
+- Click the selected diagram again or press **Escape** to clear it
+- Use the **★ open mid-neck** button to find resonant hybrid voicings
+- Use the ☾/☀ toggle (top right) to switch between light and dark themes
 
 ## Structure
 
-Single-file app — all music theory, voicing generation, SVG rendering, and Web Audio in one HTML file.
+Single-file app — all music theory, voicing generation, and SVG rendering live in one HTML file.
 
 ```
 uke-chord-atlas.html   — the whole thing
 ```
 
-## Audio Engine
-
-Each chord drones all 4 strings simultaneously:
-- Sine wave (fundamental) + triangle wave (octave harmonic) per string
-- Per-string vibrato at slightly offset rates for natural beating
-- Convolved reverb impulse response
-- Brief sawtooth transient on attack
-- Open strings boosted slightly (they ring freer on a real uke)
-
 ## Tuning
 
-Standard GCEA: G4 (392Hz) · C4 (261.63Hz) · E4 (329.63Hz) · A4 (440Hz)
-
+Standard GCEA: G · C · E · A
