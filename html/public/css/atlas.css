@@ -1,0 +1,171 @@
+/* ═══════════════════════════════════════════════════════════
+   ATLAS PAGE — Key & type selectors, chord cards, grid
+   ═══════════════════════════════════════════════════════════ */
+
+/* Key row */
+.key-row {
+  display: flex;
+  gap: 0;
+  flex-wrap: wrap;
+  margin-top: 20px;
+}
+
+.key-btn {
+  font-family: 'Jost', sans-serif;
+  font-weight: 500;
+  font-size: 16px;
+  padding: 10px 14px;
+  min-height: 44px;
+  border: 1px solid var(--border);
+  border-right: none;
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+  transition: background 0.1s, color 0.1s;
+  letter-spacing: 1px;
+  position: relative;
+}
+.key-btn:last-child { border-right: 1px solid var(--border); }
+.key-btn:hover { background: var(--surface-2); }
+.key-btn[aria-pressed="true"] {
+  background: var(--text);
+  color: var(--surface);
+  border-color: var(--text);
+  z-index: 1;
+}
+
+/* Chord type row */
+.type-row {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  align-items: center;
+  padding: 16px 40px;
+  background: var(--surface-2);
+  border-bottom: 1px solid var(--border);
+}
+.type-row legend {
+  width: 100%;
+}
+
+.type-btn {
+  font-family: 'Jost', sans-serif;
+  font-weight: 500;
+  font-size: 13px;
+  padding: 8px 12px;
+  min-height: 40px;
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s;
+  letter-spacing: 0.5px;
+}
+.type-btn:hover { background: color-mix(in srgb, var(--text) 8%, transparent); }
+.type-btn[aria-pressed="true"] {
+  background: var(--accent);
+  color: var(--accent-text);
+  border-color: var(--accent);
+}
+
+.mixed-btn {
+  margin-left: auto;
+  font-style: italic;
+  border-style: dashed;
+  color: var(--accent);
+  border-color: var(--accent);
+}
+.mixed-btn[aria-pressed="true"] {
+  background: var(--accent);
+  color: var(--accent-text);
+}
+
+/* Content area */
+#chord-content {
+  padding: 28px 40px 80px;
+  min-height: 400px;
+}
+
+/* Chord groups */
+.chord-group {
+  margin-bottom: 32px;
+}
+
+.group-label {
+  font-family: 'Jost', sans-serif;
+  font-weight: 600;
+  font-size: 16px;
+  color: var(--text);
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 6px;
+  margin-bottom: 14px;
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+.group-count {
+  font-family: 'Jost', sans-serif;
+  font-size: 11px;
+  font-style: italic;
+  color: var(--text-muted);
+  font-weight: 400;
+  letter-spacing: 1px;
+  text-transform: lowercase;
+}
+
+.voicings-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+/* Chord card */
+.chord-card {
+  cursor: pointer;
+  transition: transform 0.1s;
+  position: relative;
+  padding: 0;
+  border: none;
+  background: transparent;
+  line-height: 0;
+  border-radius: 4px;
+}
+.chord-card:hover { transform: translateY(-2px); }
+.chord-card[aria-pressed="true"] { filter: drop-shadow(0 0 8px color-mix(in srgb, var(--accent) 60%, transparent)); }
+.chord-card[aria-pressed="true"] svg rect.d-bg { fill: var(--diagram-bg-active); }
+
+/* Diagram theming */
+.chord-card svg rect.d-bg { fill: var(--diagram-bg); }
+.chord-card svg .d-paper-line { stroke: var(--diagram-line); }
+.chord-card svg .d-nut { fill: var(--diagram-strong); }
+.chord-card svg .d-fret { stroke: var(--diagram-fret); }
+.chord-card svg .d-string { stroke: var(--diagram-string); }
+.chord-card svg .d-pos { fill: var(--diagram-muted-text); }
+.chord-card svg .d-label { fill: var(--diagram-muted-text); }
+.chord-card svg .d-open { fill: none; stroke: var(--diagram-open); }
+.chord-card svg .d-open-text { fill: var(--diagram-open); }
+.chord-card svg .d-dot { fill: var(--diagram-dot); }
+.chord-card svg .d-dot-text { fill: var(--diagram-dot-text); }
+.chord-card.mixed svg .d-open { stroke: var(--accent); }
+.chord-card.mixed svg .d-open-text { fill: var(--accent); }
+.chord-card.mixed svg .d-dot { fill: var(--accent); }
+
+/* Empty state */
+.empty {
+  font-style: italic;
+  color: var(--text-muted);
+  font-size: 15px;
+  padding: 40px 0;
+  text-align: center;
+}
+
+/* Responsive overrides */
+@media (max-width: 600px) {
+  #chord-content { padding: 20px 16px 80px; }
+  .type-row { padding: 12px 16px; }
+  .key-btn { font-size: 15px; padding: 10px 12px; }
+  .voicings-grid { justify-content: space-between; }
+}

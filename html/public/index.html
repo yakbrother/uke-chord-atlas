@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="color-scheme" content="light dark">
+<meta name="description" content="A soundless reference for ukulele chord voicings across all 12 keys (GCEA tuning).">
+<title>Uke Chord Atlas</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Jost:wght@300;400;500;600;700&family=Pacifico&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/shared.css">
+<link rel="stylesheet" href="css/atlas.css">
+<script>
+  // Resolve theme before first paint to avoid a flash of the wrong theme.
+  (function () {
+    try {
+      const saved = localStorage.getItem('uca-theme');
+      const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+      const theme = saved || (prefersDark ? 'dark' : 'light');
+      document.documentElement.setAttribute('data-theme', theme);
+    } catch (e) { /* localStorage may be unavailable */ }
+  })();
+</script>
+</head>
+<body>
+<div id="app">
+
+  <header>
+    <div class="header-top">
+      <h1>Uke Chord Atlas</h1>
+      <span class="subtitle">all keys · all voicings · GCEA</span>
+    </div>
+    <div class="header-controls">
+      <button type="button" class="theme-toggle" id="theme-toggle" aria-label="Switch to dark theme">
+        <span class="icon-light" aria-hidden="true">&#9790;</span>
+        <span class="icon-dark" aria-hidden="true">&#9728;</span>
+      </button>
+    </div>
+
+    <nav class="site-nav" aria-label="Site navigation">
+      <a href="index.html" aria-current="page">Atlas</a>
+      <a href="identify.html">Identifier</a>
+    </nav>
+
+    <fieldset class="key-fieldset">
+      <legend class="visually-hidden">Key</legend>
+      <div class="key-row" id="key-row" role="group" aria-label="Select key">
+        <!-- filled by JS -->
+      </div>
+    </fieldset>
+  </header>
+
+  <fieldset class="type-row" id="type-row">
+    <legend class="visually-hidden">Chord type</legend>
+    <!-- filled by JS -->
+  </fieldset>
+
+  <main id="chord-content" aria-live="polite">
+    <div class="empty">Select a key above to begin.</div>
+  </main>
+
+</div>
+
+<div class="info-strip" id="info-strip" role="status" aria-live="polite"></div>
+
+<script src="js/music-theory.js"></script>
+<script src="js/diagram.js"></script>
+<script src="js/theme.js"></script>
+<script src="js/atlas.js"></script>
+</body>
+</html>
