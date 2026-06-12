@@ -21,8 +21,32 @@ function rootNoteName(root) {
 const OPEN = [7, 0, 4, 9]; // G C E A
 const STRING_NAMES_UKE = ["G", "C", "E", "A"];
 
+// DGBE baritone — same intervals, a perfect 4th (5 semitones) lower
+const OPEN_BARI = [2, 7, 11, 4]; // D G B E
+const STRING_NAMES_BARI = ["D", "G", "B", "E"];
+const BARI_OFFSET = 5;
+
+let currentTuning = 'standard';
+
+function setTuning(t) {
+  currentTuning = t;
+  try { localStorage.setItem('uca-tuning', t); } catch (e) {}
+}
+
+function isBaritone() { return currentTuning === 'baritone'; }
+
+function currentOpen() { return isBaritone() ? OPEN_BARI : OPEN; }
+
+function currentStringNames() { return isBaritone() ? STRING_NAMES_BARI : STRING_NAMES_UKE; }
+
+// Standard tuning noteAt — used by voicing generator (always GCEA)
 function noteAt(str, fret) {
   return (OPEN[str] + fret) % 12;
+}
+
+// Current-tuning noteAt — used by identifier and display
+function noteAtCurrent(str, fret) {
+  return (currentOpen()[str] + fret) % 12;
 }
 
 // Chord type definitions — intervals from root
@@ -106,18 +130,21 @@ function getVoicings(root) {
 // ═══════════════════════════════════════════════════════════
 
 /**
- * Given 4 fret positions [G, C, E, A], identify all matching chord names.
+ * Given 4 fret positions, identify all matching chord names.
+ * Tuning-aware: uses currentOpen() for note calculation.
  * Returns an array of { root, rootName, type, label, intervals, bassNote,
  *   isSlash } sorted best-match-first.
  */
 function identifyChord(frets) {
-  const notes = frets.map((f, i) => noteAt(i, f));
+  const open = currentOpen();
+  const notes = frets.map((f, i) => (open[i] + f) % 12);
   const uniqueNotes = [...new Set(notes)];
   const results = [];
 
-  // On re-entrant GCEA the lowest-pitched string is C (index 1).
-  // Actual pitches: G4, C4, E4, A4 — so C4 is the bass.
-  const pitches = [55, 48, 52, 57]; // MIDI-ish for ordering: G4=55, C4=48, E4=52, A4=57
+  // Bass note: use approximate MIDI pitches for the current tuning.
+  // Standard GCEA: G4=55, C4=48, E4=52, A4=57
+  // Baritone DGBE: D3=50, G3=43, B3=47, E4=52
+  const pitches = isBaritone() ? [50, 43, 47, 52] : [55, 48, 52, 57];
   let bassIdx = 0;
   let bassPitch = Infinity;
   for (let i = 0; i < 4; i++) {

@@ -34,7 +34,7 @@ function selectCard(cardEl, noteNamesArr, frets) {
   currentCard = cardEl;
   cardEl.setAttribute('aria-pressed', 'true');
 
-  const fingering = frets.map((f, si) => `${STRING_NAMES_UKE[si]}${f}`).join(' ');
+  const fingering = frets.map((f, si) => `${currentStringNames()[si]}${f}`).join(' ');
   showInfo(`${noteNamesArr.join(' \u00b7 ')}  \u2014  ${fingering}`);
 }
 
@@ -91,8 +91,11 @@ function renderContent() {
     return;
   }
 
-  const root = state.root;
-  let voicings = getVoicings(root);
+  const displayRoot = state.root;
+  // Baritone: same shapes are 5 semitones lower, so look up (root + 5) in the
+  // standard-tuning voicing cache to get fingerings that sound as displayRoot.
+  const lookupRoot = isBaritone() ? (displayRoot + BARI_OFFSET) % 12 : displayRoot;
+  let voicings = getVoicings(lookupRoot);
 
   if (state.type !== "all") {
     voicings = voicings.filter(v => v.type === state.type);
@@ -111,7 +114,7 @@ function renderContent() {
 
   const groups = {};
   for (const v of voicings) {
-    const lbl = rootNoteName(root) + (v.label === 'maj' ? '' : v.label);
+    const lbl = rootNoteName(displayRoot) + (v.label === 'maj' ? '' : v.label);
     if (!groups[lbl]) groups[lbl] = [];
     groups[lbl].push(v);
   }
@@ -128,8 +131,12 @@ function renderContent() {
     html += `<div class="voicings-grid">`;
     vs.forEach((v) => {
       const mixed = isMixed(v.frets);
-      const noteNamesArr = v.notes.map(n => noteName(n, root));
-      const svg = chordSVG(v.frets, noteNamesArr, root, mixed);
+      // Transpose note names for baritone (standard notes minus offset)
+      const noteNamesArr = v.notes.map(n => {
+        const display = isBaritone() ? ((n - BARI_OFFSET + 12) % 12) : n;
+        return noteName(display, displayRoot);
+      });
+      const svg = chordSVG(v.frets, noteNamesArr, displayRoot, mixed);
       const fretData = JSON.stringify(v.frets);
       const noteData = JSON.stringify(noteNamesArr);
       const ariaLabel = voicingAriaLabel(grpLabel, noteNamesArr, v.frets);
@@ -168,13 +175,37 @@ function toggleMixed() {
 
 // ── Boot ────────────────────────────────────────────────────
 
+function renderTuningToggle() {
+  const container = document.getElementById('tuning-toggle');
+  if (!container) return;
+  container.innerHTML = `
+    <button type="button" class="tuning-btn" aria-pressed="${!isBaritone()}" data-tuning="standard">Standard</button>
+    <button type="button" class="tuning-btn" aria-pressed="${isBaritone()}" data-tuning="baritone">Baritone</button>
+  `;
+}
+
+function switchTuning(tuning) {
+  setTuning(tuning);
+  renderTuningToggle();
+  renderContent();
+}
+
 document.addEventListener('DOMContentLoaded', () => {
+  // Restore saved tuning
+  try { currentTuning = localStorage.getItem('uca-tuning') || 'standard'; } catch (e) {}
+
   renderKeys();
   renderTypes();
+  renderTuningToggle();
   renderContent();
   applyTheme(currentTheme());
 
   document.getElementById('theme-toggle').addEventListener('click', toggleTheme);
+
+  document.getElementById('tuning-toggle').addEventListener('click', e => {
+    const btn = e.target.closest('.tuning-btn');
+    if (btn && btn.dataset.tuning) switchTuning(btn.dataset.tuning);
+  });
 
   document.getElementById('key-row').addEventListener('click', e => {
     const btn = e.target.closest('.key-btn');

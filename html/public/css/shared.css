@@ -213,13 +213,53 @@ h1 {
 [data-theme="dark"] .theme-toggle .icon-dark { display: inline; }
 
 /* ═══════════════════════════════════════════════════════════
+   TUNING TOGGLE
+   ═══════════════════════════════════════════════════════════ */
+
+.nav-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-top: 14px;
+  flex-wrap: wrap;
+}
+
+.tuning-toggle {
+  display: flex;
+  gap: 0;
+}
+
+.tuning-btn {
+  font-family: 'Jost', sans-serif;
+  font-weight: 500;
+  font-size: 12px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  padding: 6px 14px;
+  border: 1px solid var(--border);
+  border-right: none;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: background 0.1s, color 0.1s;
+}
+.tuning-btn:last-child { border-right: 1px solid var(--border); }
+.tuning-btn:hover { background: var(--surface-2); }
+.tuning-btn[aria-pressed="true"] {
+  background: var(--accent);
+  color: var(--accent-text);
+  border-color: var(--accent);
+}
+.tuning-btn[aria-pressed="true"] + .tuning-btn { border-left-color: var(--accent); }
+
+/* ═══════════════════════════════════════════════════════════
    NAV
    ═══════════════════════════════════════════════════════════ */
 
 .site-nav {
   display: flex;
   gap: 0;
-  margin-top: 14px;
 }
 
 .site-nav a {
@@ -285,8 +325,63 @@ legend {
 .info-strip.show { transform: translateX(-50%) translateY(0); }
 
 /* ═══════════════════════════════════════════════════════════
+   FOOTER
+   ═══════════════════════════════════════════════════════════ */
+
+.site-footer {
+  padding: 28px 40px;
+  border-top: 1px solid var(--border);
+  text-align: center;
+  font-size: 12px;
+  color: var(--text-muted);
+  letter-spacing: 1px;
+}
+
+.site-footer p {
+  margin-bottom: 4px;
+}
+.site-footer p:last-child { margin-bottom: 0; }
+
+.footer-links {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  align-items: center;
+}
+
+.footer-links a {
+  color: var(--accent);
+  text-decoration: none;
+  transition: color 0.1s;
+}
+.footer-links a:hover {
+  color: var(--accent-light);
+  text-decoration: underline;
+}
+
+/* ═══════════════════════════════════════════════════════════
    ACCESSIBILITY
    ═══════════════════════════════════════════════════════════ */
+
+.skip-link {
+  position: absolute;
+  top: -100px;
+  left: 16px;
+  background: var(--accent);
+  color: var(--accent-text);
+  padding: 8px 16px;
+  font-family: 'Jost', sans-serif;
+  font-weight: 500;
+  font-size: 13px;
+  letter-spacing: 1px;
+  text-decoration: none;
+  z-index: 2000;
+  border-radius: 0 0 4px 4px;
+  transition: top 0.15s;
+}
+.skip-link:focus {
+  top: 0;
+}
 
 :focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
 
@@ -308,6 +403,7 @@ legend {
   header { padding: 24px 16px 20px; }
   .header-top { padding-right: 52px; }
   .header-controls { top: 16px; right: 16px; }
+  .site-footer { padding: 20px 16px; }
 }
 
 @media (prefers-reduced-motion: reduce) {

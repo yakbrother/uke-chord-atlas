@@ -65,7 +65,7 @@ function chordSVG(frets, noteNamesArr, root, mixed) {
   });
 
   // String labels
-  STRING_NAMES_UKE.forEach((sn, si) => {
+  currentStringNames().forEach((sn, si) => {
     s += `<text class="d-label" x="${lm + si * ss}" y="${H - 2}" text-anchor="middle" font-size="7" font-family="'Jost',sans-serif">${sn}</text>`;
   });
 
@@ -76,7 +76,7 @@ function chordSVG(frets, noteNamesArr, root, mixed) {
 // Build a spoken-friendly description of a voicing for screen readers.
 function voicingAriaLabel(grpLabel, noteNamesArr, frets) {
   const fingering = frets.map((f, si) => {
-    const str = STRING_NAMES_UKE[si];
+    const str = currentStringNames()[si];
     return f === 0 ? `${str} open` : `${str} fret ${f}`;
   }).join(', ');
   return `${grpLabel} voicing. Notes ${noteNamesArr.join(', ')}. Fingering ${fingering}.`;

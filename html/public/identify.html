@@ -4,7 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="color-scheme" content="light dark">
-<meta name="description" content="Tap frets on an interactive ukulele fretboard and instantly identify the chord (GCEA tuning).">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:;">
+<meta name="description" content="Tap frets on an interactive ukulele fretboard and instantly identify the chord — standard GCEA and baritone DGBE tuning.">
+<meta name="author" content="Tim Eaton">
 <title>Chord Identifier — Uke Chord Atlas</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -23,6 +25,7 @@
 </script>
 </head>
 <body>
+<a href="#fretboard-container" class="skip-link">Skip to main content</a>
 <div id="app">
 
   <header>
@@ -37,15 +40,20 @@
       </button>
     </div>
 
-    <nav class="site-nav" aria-label="Site navigation">
-      <a href="index.html">Atlas</a>
-      <a href="identify.html" aria-current="page">Identifier</a>
-    </nav>
+    <div class="nav-row">
+      <nav class="site-nav" aria-label="Site navigation">
+        <a href="index.html">Atlas</a>
+        <a href="identify.html" aria-current="page">Identifier</a>
+      </nav>
+      <div class="tuning-toggle" id="tuning-toggle" role="group" aria-label="Tuning">
+        <!-- filled by JS -->
+      </div>
+    </div>
   </header>
 
   <main class="identify-layout">
     <div>
-      <div id="fretboard-container" aria-label="Interactive fretboard — click to select frets">
+      <div id="fretboard-container" role="application" aria-label="Interactive fretboard — click to select frets">
         <!-- SVG rendered by JS -->
       </div>
       <button type="button" class="clear-btn" id="clear-btn">Clear all</button>
@@ -55,6 +63,15 @@
       <!-- filled by JS -->
     </div>
   </main>
+
+  <footer class="site-footer" role="contentinfo">
+    <p>&copy; 2025 Tim Eaton. All rights reserved.</p>
+    <p class="footer-links">
+      <a href="https://timeaton.dev" rel="noopener noreferrer">timeaton.dev</a>
+      <span aria-hidden="true">&middot;</span>
+      <a href="https://mostlytrue.life" rel="noopener noreferrer">mostlytrue.life</a>
+    </p>
+  </footer>
 
 </div>
 

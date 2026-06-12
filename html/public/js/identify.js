@@ -66,7 +66,7 @@ function renderFretboard() {
   }
 
   // String name labels at the bottom
-  STRING_NAMES_UKE.forEach((name, s) => {
+  currentStringNames().forEach((name, s) => {
     const x = leftMargin + s * cellW;
     svg += `<text class="fb-string-name" x="${x}" y="${topMargin + gridH + 20}" text-anchor="middle">${name}</text>`;
   });
@@ -76,7 +76,7 @@ function renderFretboard() {
     const x = leftMargin + s * cellW;
     const cy = topMargin - 16;
     const isSelected = selectedFrets[s] === 0;
-    const note = noteName(noteAt(s, 0), 0);
+    const note = noteName(noteAtCurrent(s, 0), 0);
 
     // Clickable area for "open"
     svg += `<rect class="fb-hit" x="${x - cellW / 2 + 1}" y="${cy - 14}" width="${cellW - 2}" height="28" data-string="${s}" data-fret="0"/>`;
@@ -101,7 +101,7 @@ function renderFretboard() {
       svg += `<rect class="fb-hit" x="${x - cellW / 2 + 1}" y="${cy - cellH / 2 + 1}" width="${cellW - 2}" height="${cellH - 2}" data-string="${s}" data-fret="${f}"/>`;
 
       if (isSelected) {
-        const note = noteName(noteAt(s, f), 0);
+        const note = noteName(noteAtCurrent(s, f), 0);
         svg += `<circle class="fb-dot fb-selected" cx="${x}" cy="${cy}" r="${cellH * 0.34}"/>`;
         svg += `<text class="fb-dot-text" x="${x}" y="${cy + 4}" text-anchor="middle">${note}</text>`;
       }
@@ -141,13 +141,14 @@ function clearFretboard() {
 
 function renderResult() {
   const container = document.getElementById('identify-result');
-  const notes = selectedFrets.map((f, i) => noteAt(i, f));
+  const notes = selectedFrets.map((f, i) => noteAtCurrent(i, f));
   const noteNamesArr = notes.map(n => noteName(n, 0));
+  const strNames = currentStringNames();
 
   // Always show current notes
   const notesDisplay = selectedFrets.map((f, i) => {
-    const name = noteName(noteAt(i, f), 0);
-    return `<span class="id-note">${STRING_NAMES_UKE[i]}: ${name}${f > 0 ? ' <small>(fret ' + f + ')</small>' : ' <small>(open)</small>'}</span>`;
+    const name = noteName(noteAtCurrent(i, f), 0);
+    return `<span class="id-note">${strNames[i]}: ${name}${f > 0 ? ' <small>(fret ' + f + ')</small>' : ' <small>(open)</small>'}</span>`;
   }).join('');
 
   const results = identifyChord(selectedFrets);
@@ -182,11 +183,35 @@ function renderResult() {
 
 // ── Boot ────────────────────────────────────────────────────
 
+function renderTuningToggleId() {
+  const container = document.getElementById('tuning-toggle');
+  if (!container) return;
+  container.innerHTML = `
+    <button type="button" class="tuning-btn" aria-pressed="${!isBaritone()}" data-tuning="standard">Standard</button>
+    <button type="button" class="tuning-btn" aria-pressed="${isBaritone()}" data-tuning="baritone">Baritone</button>
+  `;
+}
+
+function switchTuningId(tuning) {
+  setTuning(tuning);
+  renderTuningToggleId();
+  clearFretboard();
+}
+
 document.addEventListener('DOMContentLoaded', () => {
+  // Restore saved tuning
+  try { currentTuning = localStorage.getItem('uca-tuning') || 'standard'; } catch (e) {}
+
+  renderTuningToggleId();
   renderFretboard();
   renderResult();
   applyTheme(currentTheme());
 
   document.getElementById('theme-toggle').addEventListener('click', toggleTheme);
   document.getElementById('clear-btn').addEventListener('click', clearFretboard);
+
+  document.getElementById('tuning-toggle').addEventListener('click', e => {
+    const btn = e.target.closest('.tuning-btn');
+    if (btn && btn.dataset.tuning) switchTuningId(btn.dataset.tuning);
+  });
 });
