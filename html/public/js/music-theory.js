@@ -50,23 +50,24 @@ function noteAtCurrent(str, fret) {
 }
 
 // Chord type definitions — intervals from root
+// commonality: higher = more likely to be the intended chord (1-10 scale)
 const CHORD_TYPES = [
-  { id: "maj",    label: "maj",      tones: [0, 4, 7] },
-  { id: "min",    label: "min",      tones: [0, 3, 7] },
-  { id: "sus2",   label: "sus2",     tones: [0, 2, 7] },
-  { id: "sus4",   label: "sus4",     tones: [0, 5, 7] },
-  { id: "add9",   label: "add9",     tones: [0, 4, 7, 2] },
-  { id: "6",      label: "6",        tones: [0, 4, 7, 9] },
-  { id: "69",     label: "6/9",      tones: [0, 4, 7, 9, 2] },
-  { id: "7",      label: "7",        tones: [0, 4, 7, 10] },
-  { id: "maj7",   label: "maj7",     tones: [0, 4, 7, 11] },
-  { id: "9",      label: "9",        tones: [0, 4, 7, 10, 2] },
-  { id: "maj9",   label: "maj9",     tones: [0, 4, 7, 11, 2] },
-  { id: "m7",     label: "m7",       tones: [0, 3, 7, 10] },
-  { id: "mmaj7",  label: "m(maj7)",  tones: [0, 3, 7, 11] },
-  { id: "m9",     label: "m9",       tones: [0, 3, 7, 10, 2] },
-  { id: "7sus4",  label: "7sus4",    tones: [0, 5, 7, 10] },
-  { id: "add11",  label: "add11",    tones: [0, 4, 5, 7] },
+  { id: "maj",    label: "maj",      tones: [0, 4, 7],    commonality: 10 },
+  { id: "min",    label: "min",      tones: [0, 3, 7],    commonality: 10 },
+  { id: "7",      label: "7",        tones: [0, 4, 7, 10], commonality: 9 },
+  { id: "m7",     label: "m7",       tones: [0, 3, 7, 10], commonality: 8 },
+  { id: "maj7",   label: "maj7",     tones: [0, 4, 7, 11], commonality: 8 },
+  { id: "sus4",   label: "sus4",     tones: [0, 5, 7],    commonality: 7 },
+  { id: "sus2",   label: "sus2",     tones: [0, 2, 7],    commonality: 6 },
+  { id: "6",      label: "6",        tones: [0, 4, 7, 9],  commonality: 6 },
+  { id: "add9",   label: "add9",     tones: [0, 4, 7, 2],  commonality: 6 },
+  { id: "m9",     label: "m9",       tones: [0, 3, 7, 10, 2], commonality: 5 },
+  { id: "9",      label: "9",        tones: [0, 4, 7, 10, 2], commonality: 5 },
+  { id: "maj9",   label: "maj9",     tones: [0, 4, 7, 11, 2], commonality: 5 },
+  { id: "mmaj7",  label: "m(maj7)",  tones: [0, 3, 7, 11], commonality: 4 },
+  { id: "7sus4",  label: "7sus4",    tones: [0, 5, 7, 10], commonality: 4 },
+  { id: "69",     label: "6/9",      tones: [0, 4, 7, 9, 2], commonality: 3 },
+  { id: "add11",  label: "add11",    tones: [0, 4, 5, 7],  commonality: 3 },
 ];
 
 // Interval display names for the identifier page
@@ -185,11 +186,15 @@ function identifyChord(frets) {
     }
   }
 
-  // Sort: non-slash before slash, fewer tones (simpler) first, then alphabetical
+  // Sort: non-slash before slash, more common first, fewer tones first, then alphabetical
   results.sort((a, b) => {
     if (a.isSlash !== b.isSlash) return a.isSlash ? 1 : -1;
-    const diff = a.type.tones.length - b.type.tones.length;
-    if (diff !== 0) return diff;
+    // More common chord types first (higher commonality)
+    const commonalityDiff = b.type.commonality - a.type.commonality;
+    if (commonalityDiff !== 0) return commonalityDiff;
+    // Fewer tones (simpler) first
+    const tonesDiff = a.type.tones.length - b.type.tones.length;
+    if (tonesDiff !== 0) return tonesDiff;
     return a.label.localeCompare(b.label);
   });
 
