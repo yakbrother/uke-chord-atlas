@@ -18,8 +18,10 @@ function rootNoteName(root) {
 }
 
 // GCEA open-string pitches (semitones, C = 0)
-const OPEN = [7, 0, 4, 9]; // G C E A
+const OPEN = [7, 0, 4, 9]; // G C E A (high-G)
+const OPEN_LOWG = [-5, 0, 4, 9]; // g C E A (low-G, octave lower)
 const STRING_NAMES_UKE = ["G", "C", "E", "A"];
+const STRING_NAMES_LOWG = ["g", "C", "E", "A"];
 
 // DGBE baritone — same intervals, a perfect 4th (5 semitones) lower
 const OPEN_BARI = [2, 7, 11, 4]; // D G B E
@@ -33,11 +35,20 @@ function setTuning(t) {
   try { localStorage.setItem('uca-tuning', t); } catch (e) {}
 }
 
+function isLowG() { return currentTuning === 'lowg'; }
 function isBaritone() { return currentTuning === 'baritone'; }
 
-function currentOpen() { return isBaritone() ? OPEN_BARI : OPEN; }
+function currentOpen() {
+  if (isBaritone()) return OPEN_BARI;
+  if (isLowG()) return OPEN_LOWG;
+  return OPEN;
+}
 
-function currentStringNames() { return isBaritone() ? STRING_NAMES_BARI : STRING_NAMES_UKE; }
+function currentStringNames() {
+  if (isBaritone()) return STRING_NAMES_BARI;
+  if (isLowG()) return STRING_NAMES_LOWG;
+  return STRING_NAMES_UKE;
+}
 
 // Standard tuning noteAt — used by voicing generator (always GCEA)
 function noteAt(str, fret) {
