@@ -1,0 +1,177 @@
+/* ═══════════════════════════════════════════════════════════
+   PRINT STYLESHEET
+   Optimized for printing chord charts
+   ═══════════════════════════════════════════════════════════ */
+
+@media print {
+  /* Hide non-essential elements */
+  .skip-link,
+  .theme-toggle,
+  .site-nav,
+  .tuning-toggle,
+  .site-footer,
+  .info-strip,
+  #theme-toggle {
+    display: none !important;
+  }
+
+  /* Simplify header */
+  header {
+    border-bottom: 1px solid #000;
+    margin-bottom: 16px;
+  }
+
+  .header-top {
+    padding-right: 0;
+  }
+
+  h1 {
+    font-size: 20px;
+    color: #000;
+  }
+
+  .subtitle {
+    display: none;
+  }
+
+  /* Print layout */
+  #app {
+    max-width: none;
+    margin: 0;
+    background: white;
+    box-shadow: none;
+  }
+
+  #app::before,
+  #app::after {
+    display: none;
+  }
+
+  body::before {
+    display: none;
+  }
+
+  /* Key and type selectors */
+  .key-row,
+  .type-row {
+    page-break-inside: avoid;
+  }
+
+  .key-btn {
+    font-size: 12px;
+    padding: 6px 8px;
+    border: 1px solid #000;
+  }
+
+  .type-btn {
+    font-size: 10px;
+    padding: 4px 6px;
+    border: 1px solid #000;
+  }
+
+  /* Chord groups - avoid breaking within groups */
+  .chord-group {
+    page-break-inside: avoid;
+    margin-bottom: 16px;
+  }
+
+  .group-label {
+    font-size: 14px;
+    border-bottom: 1px solid #000;
+    padding-bottom: 4px;
+    color: #000;
+  }
+
+  /* Chord cards - compact layout for printing */
+  .voicings-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .chord-card {
+    margin: 0;
+    padding: 0;
+  }
+
+  .chord-card svg {
+    width: 60px;
+    height: 80px;
+  }
+
+  /* Diagram styling for print */
+  .chord-card svg rect.d-bg {
+    fill: #fff;
+    stroke: #000;
+    stroke-width: 0.5;
+  }
+
+  .chord-card svg .d-paper-line {
+    stroke: #ccc;
+    stroke-width: 0.3;
+  }
+
+  .chord-card svg .d-nut {
+    fill: #000;
+  }
+
+  .chord-card svg .d-fret {
+    stroke: #333;
+    stroke-width: 0.5;
+  }
+
+  .chord-card svg .d-string {
+    stroke: #666;
+    stroke-width: 1;
+  }
+
+  .chord-card svg .d-pos {
+    fill: #666;
+    font-size: 6px;
+  }
+
+  .chord-card svg .d-label {
+    fill: #666;
+    font-size: 6px;
+  }
+
+  .chord-card svg .d-open {
+    fill: none;
+    stroke: #000;
+    stroke-width: 1;
+  }
+
+  .chord-card svg .d-open-text {
+    fill: #000;
+    font-size: 5px;
+  }
+
+  .chord-card svg .d-dot {
+    fill: #000;
+  }
+
+  .chord-card svg .d-dot-text {
+    fill: #fff;
+    font-size: 5px;
+  }
+
+  /* Favorite button - hide for print */
+  .favorite-btn {
+    display: none;
+  }
+
+  /* Ensure good contrast */
+  [data-theme="dark"] {
+    --bg: #fff;
+    --surface: #fff;
+    --surface-2: #fff;
+    --text: #000;
+    --text-muted: #666;
+    --border: #000;
+  }
+
+  /* Page breaks */
+  .empty {
+    page-break-inside: avoid;
+  }
+}
