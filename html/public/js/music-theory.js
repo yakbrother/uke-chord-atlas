@@ -195,3 +195,62 @@ function identifyChord(frets) {
 
   return results;
 }
+
+// ═══════════════════════════════════════════════════════════
+// CHORD PROGRESSION SUGGESTIONS
+// ═══════════════════════════════════════════════════════════
+
+// Common chord progression patterns (in Roman numeral analysis)
+// Each pattern is an array of scale degrees relative to the tonic (1 = I, 2 = ii, etc.)
+const PROGRESSION_PATTERNS = [
+  { name: 'I-IV-V',    pattern: [1, 4, 5] },  // Blues, Rock
+  { name: 'I-V-vi-IV', pattern: [1, 5, 6, 4] }, // Pop, Rock
+  { name: 'ii-V-I',    pattern: [2, 5, 1] },  // Jazz, common
+  { name: 'I-vi-ii-V', pattern: [1, 6, 2, 5] }, // Circle progression
+  { name: 'I-V-vi-iii-IV', pattern: [1, 5, 6, 3, 4] }, // 50s doo-wop
+  { name: 'vi-ii-V-I', pattern: [6, 2, 5, 1] }, // Jazz turnaround
+  { name: 'I-ii-iii-IV', pattern: [1, 2, 3, 4] }, // Ascending
+  { name: 'I-IV-ii-V', pattern: [1, 4, 2, 5] }, // Common
+];
+
+// Map scale degree to chord type for progression display
+// In major: 1=maj, 2=min, 3=min, 4=maj, 5=maj, 6=min, 7=dim
+// In minor: 1=min, 2=dim, 3=maj, 4=min, 5=min, 6=maj, 7=maj
+function getChordTypeForDegree(degree, isMinor) {
+  if (isMinor) {
+    // Natural minor scale
+    const minorTypes = [null, 'min', 'dim', 'maj', 'min', 'min', 'maj', 'maj'];
+    return minorTypes[degree] || 'maj';
+  } else {
+    // Major scale
+    const majorTypes = [null, 'maj', 'min', 'min', 'maj', 'maj', 'min', 'dim'];
+    return majorTypes[degree] || 'maj';
+  }
+}
+
+/**
+ * Get chord progression suggestions for a given root and chord type
+ * @param {number} root - The root note (0-11)
+ * @param {string} typeId - The chord type id
+ * @returns {Array} Array of progression suggestions, each with name and chords
+ */
+function getProgressionSuggestions(root, typeId) {
+  const isMinor = typeId === 'min' || typeId === 'm7' || typeId === 'm9' || typeId === 'mmaj7';
+  const suggestions = [];
+
+  for (const pattern of PROGRESSION_PATTERNS) {
+    const chords = pattern.pattern.map(degree => {
+      const chordRoot = (root + degree - 1) % 12;
+      const chordType = getChordTypeForDegree(degree, isMinor);
+      const rootName = rootNoteName(chordRoot);
+      const label = chordType === 'maj' ? rootName : rootName + chordType;
+      return label;
+    });
+    suggestions.push({
+      name: pattern.name,
+      chords: chords
+    });
+  }
+
+  return suggestions;
+}
