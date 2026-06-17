@@ -1,6 +1,6 @@
 // ═══════════════════════════════════════════════════════════
 // ATLAS PAGE — UI state, rendering, event wiring
-// Depends on: music-theory.js, diagram.js, theme.js
+// Depends on: music-theory.js, diagram.js, theme.js, tuning.js
 // ═══════════════════════════════════════════════════════════
 
 const KEYS = [
@@ -175,37 +175,14 @@ function toggleMixed() {
 
 // ── Boot ────────────────────────────────────────────────────
 
-function renderTuningToggle() {
-  const container = document.getElementById('tuning-toggle');
-  if (!container) return;
-  container.innerHTML = `
-    <button type="button" class="tuning-btn" aria-pressed="${!isBaritone()}" data-tuning="standard">Standard</button>
-    <button type="button" class="tuning-btn" aria-pressed="${isBaritone()}" data-tuning="baritone">Baritone</button>
-  `;
-}
-
-function switchTuning(tuning) {
-  setTuning(tuning);
-  renderTuningToggle();
-  renderContent();
-}
-
 document.addEventListener('DOMContentLoaded', () => {
-  // Restore saved tuning
-  try { currentTuning = localStorage.getItem('uca-tuning') || 'standard'; } catch (e) {}
-
   renderKeys();
   renderTypes();
-  renderTuningToggle();
+  renderTuningToggle('tuning-toggle', renderContent);
   renderContent();
   applyTheme(currentTheme());
 
   document.getElementById('theme-toggle').addEventListener('click', toggleTheme);
-
-  document.getElementById('tuning-toggle').addEventListener('click', e => {
-    const btn = e.target.closest('.tuning-btn');
-    if (btn && btn.dataset.tuning) switchTuning(btn.dataset.tuning);
-  });
 
   document.getElementById('key-row').addEventListener('click', e => {
     const btn = e.target.closest('.key-btn');

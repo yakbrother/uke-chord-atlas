@@ -1,6 +1,6 @@
 // ═══════════════════════════════════════════════════════════
 // CHORD IDENTIFIER PAGE
-// Depends on: music-theory.js, theme.js
+// Depends on: music-theory.js, theme.js, tuning.js
 // ═══════════════════════════════════════════════════════════
 
 const MAX_FRET = 12;
@@ -183,26 +183,7 @@ function renderResult() {
 
 // ── Boot ────────────────────────────────────────────────────
 
-function renderTuningToggleId() {
-  const container = document.getElementById('tuning-toggle');
-  if (!container) return;
-  container.innerHTML = `
-    <button type="button" class="tuning-btn" aria-pressed="${!isBaritone()}" data-tuning="standard">Standard</button>
-    <button type="button" class="tuning-btn" aria-pressed="${isBaritone()}" data-tuning="baritone">Baritone</button>
-  `;
-}
-
-function switchTuningId(tuning) {
-  setTuning(tuning);
-  renderTuningToggleId();
-  clearFretboard();
-}
-
 document.addEventListener('DOMContentLoaded', () => {
-  // Restore saved tuning
-  try { currentTuning = localStorage.getItem('uca-tuning') || 'standard'; } catch (e) {}
-
-  renderTuningToggleId();
   renderFretboard();
   renderResult();
   applyTheme(currentTheme());
@@ -210,8 +191,5 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('theme-toggle').addEventListener('click', toggleTheme);
   document.getElementById('clear-btn').addEventListener('click', clearFretboard);
 
-  document.getElementById('tuning-toggle').addEventListener('click', e => {
-    const btn = e.target.closest('.tuning-btn');
-    if (btn && btn.dataset.tuning) switchTuningId(btn.dataset.tuning);
-  });
+  renderTuningToggle('tuning-toggle', clearFretboard);
 });
