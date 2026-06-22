@@ -409,3 +409,74 @@ legend {
 @media (prefers-reduced-motion: reduce) {
   * { transition: none !important; animation: none !important; }
 }
+
+/* ═══════════════════════════════════════════════════════════
+   SEARCH
+   ═══════════════════════════════════════════════════════════ */
+
+.search-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 40px 16px;
+}
+
+.search-input {
+  flex: 1;
+  max-width: 400px;
+  font-family: 'Jost', sans-serif;
+  font-size: 14px;
+  padding: 10px 14px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--surface);
+  color: var(--text);
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.search-input::placeholder {
+  color: var(--text-muted);
+}
+
+.search-input:focus {
+  outline: none;
+  border-color: var(--focus);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--focus) 20%, transparent);
+}
+
+.search-clear {
+  font-family: 'Jost', sans-serif;
+  font-size: 20px;
+  line-height: 1;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--surface);
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+  display: none;
+}
+
+.search-clear:hover {
+  background: var(--surface-2);
+  color: var(--text);
+}
+
+.search-clear:focus {
+  outline: none;
+  border-color: var(--focus);
+}
+
+.search-input:not(:placeholder-shown) ~ .search-clear {
+  display: block;
+}
+
+@media (max-width: 600px) {
+  .search-row {
+    padding: 0 16px 16px;
+  }
+  .search-input {
+    max-width: none;
+  }
+}

@@ -22,6 +22,7 @@ const state = {
   root: null,
   type: "all",
   mixedOnly: false,
+  searchQuery: "",
 };
 
 // ── URL State Management ────────────────────────────────────────
@@ -71,6 +72,17 @@ function updateUrl() {
   
   const newUrl = `${window.location.pathname}?${params.toString()}`;
   window.history.replaceState(null, '', newUrl);
+// ── Search ───────────────────────────────────────────────────────
+
+function setSearchQuery(query) {
+  state.searchQuery = query.toLowerCase().trim();
+  renderContent();
+}
+
+function clearSearch() {
+  state.searchQuery = "";
+  document.getElementById('chord-search').value = "";
+  renderContent();
 }
 
 // ── Selection / detail strip ────────────────────────────────
@@ -151,6 +163,15 @@ function renderContent() {
   }
   if (state.mixedOnly) {
     voicings = voicings.filter(v => isMixed(v.frets));
+  }
+  
+  // Filter by search query
+  if (state.searchQuery) {
+    const rootName = rootNoteName(displayRoot);
+    voicings = voicings.filter(v => {
+      const chordName = rootName + (v.label === 'maj' ? '' : v.label);
+      return chordName.toLowerCase().includes(state.searchQuery);
+    });
   }
 
   voicings = voicings.slice().sort((a, b) => {
@@ -270,6 +291,13 @@ document.addEventListener('DOMContentLoaded', () => {
       selectCard(card, JSON.parse(card.dataset.notes), JSON.parse(card.dataset.frets));
     }
   });
+
+  // Search functionality
+  const searchInput = document.getElementById('chord-search');
+  if (searchInput) {
+    searchInput.addEventListener('input', e => setSearchQuery(e.target.value));
+  }
+  document.getElementById('search-clear')?.addEventListener('click', clearSearch);
 
   // Precompute a few common keys in the background
   setTimeout(() => { [0, 2, 5, 7, 9].forEach(r => getVoicings(r)); }, 500);
