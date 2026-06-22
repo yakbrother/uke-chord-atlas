@@ -119,11 +119,37 @@ function generateVoicings(root) {
   return results;
 }
 
-// Cache voicings per root
-const voicingCache = {};
+// Cache voicings per root with LRU eviction
+// Max 8 entries: covers all common keys without unbounded growth
+const VOICING_CACHE_MAX = 8;
+const voicingCache = {
+  _order: [], // Track access order for LRU
+  _data: {}, // Actual cached data
+};
+
 function getVoicings(root) {
-  if (!voicingCache[root]) voicingCache[root] = generateVoicings(root);
-  return voicingCache[root];
+  // If cached, move to end of access order (most recently used)
+  if (voicingCache._data[root]) {
+    const idx = voicingCache._order.indexOf(root);
+    if (idx > -1) {
+      voicingCache._order.splice(idx, 1);
+    }
+    voicingCache._order.push(root);
+    return voicingCache._data[root];
+  }
+
+  // Generate and cache
+  const voicings = generateVoicings(root);
+  voicingCache._data[root] = voicings;
+  voicingCache._order.push(root);
+
+  // Evict oldest if over limit
+  while (voicingCache._order.length > VOICING_CACHE_MAX) {
+    const oldest = voicingCache._order.shift();
+    delete voicingCache._data[oldest];
+  }
+
+  return voicings;
 }
 
 // ═══════════════════════════════════════════════════════════
