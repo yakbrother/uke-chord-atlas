@@ -137,6 +137,28 @@
 .chord-card[aria-pressed="true"] { filter: drop-shadow(0 0 8px color-mix(in srgb, var(--accent) 60%, transparent)); }
 .chord-card[aria-pressed="true"] svg rect.d-bg { fill: var(--diagram-bg-active); }
 
+/* Favorite button */
+.favorite-btn {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  background: transparent;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  z-index: 10;
+  opacity: 0.7;
+  transition: opacity 0.15s, transform 0.1s;
+}
+.favorite-btn:hover {
+  opacity: 1;
+  transform: scale(1.1);
+}
+.favorite-btn:focus {
+  outline: none;
+  opacity: 1;
+}
+
 /* Diagram theming */
 .chord-card svg rect.d-bg { fill: var(--diagram-bg); }
 .chord-card svg .d-paper-line { stroke: var(--diagram-line); }

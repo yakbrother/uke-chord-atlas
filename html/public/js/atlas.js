@@ -1,6 +1,6 @@
 // ═══════════════════════════════════════════════════════════
 // ATLAS PAGE — UI state, rendering, event wiring
-// Depends on: music-theory.js, diagram.js, theme.js, tuning.js
+// Depends on: music-theory.js, diagram.js, theme.js, tuning.js, favorites.js
 // ═══════════════════════════════════════════════════════════
 
 const KEYS = [
@@ -139,13 +139,14 @@ function renderContent() {
       const svg = chordSVG(v.frets, noteNamesArr, displayRoot, mixed);
       const fretData = JSON.stringify(v.frets);
       const noteData = JSON.stringify(noteNamesArr);
+      const isFavorited = isFavorite(displayRoot, v.type, v.frets);
       const ariaLabel = voicingAriaLabel(grpLabel, noteNamesArr, v.frets);
       html += `<button type="button" class="chord-card${mixed ? ' mixed' : ''}"
         aria-pressed="false"
         aria-label="${ariaLabel}"
-        data-frets='${fretData}' data-notes='${noteData}'
+        data-root="${displayRoot}" data-type="${v.type}" data-frets='${fretData}' data-notes='${noteData}'
         title="${noteNamesArr.join('-')} | frets: ${v.frets.join('-')}"
-      >${svg}</button>`;
+      >${svg}<span class="favorite-btn" data-root="${displayRoot}" data-type="${v.type}" data-frets='${fretData}'>${getStarIcon(isFavorited)}</span></button>`;
     });
     html += `</div></div>`;
   }
@@ -198,8 +199,21 @@ document.addEventListener('DOMContentLoaded', () => {
 
   document.getElementById('chord-content').addEventListener('click', e => {
     const card = e.target.closest('.chord-card');
-    if (!card) return;
-    selectCard(card, JSON.parse(card.dataset.notes), JSON.parse(card.dataset.frets));
+    const favBtn = e.target.closest('.favorite-btn');
+    
+    if (favBtn) {
+      e.stopPropagation();
+      const root = parseInt(favBtn.dataset.root, 10);
+      const type = favBtn.dataset.type;
+      const frets = JSON.parse(favBtn.dataset.frets);
+      const isNowFavorited = toggleFavorite(root, type, frets);
+      favBtn.innerHTML = getStarIcon(isNowFavorited);
+      return;
+    }
+    
+    if (card) {
+      selectCard(card, JSON.parse(card.dataset.notes), JSON.parse(card.dataset.frets));
+    }
   });
 
   // Precompute a few common keys in the background
