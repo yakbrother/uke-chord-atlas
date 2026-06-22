@@ -8,6 +8,35 @@ const MAX_FRET = 12;
 // Current fret selection per string [G, C, E, A] — 0 = open
 const selectedFrets = [0, 0, 0, 0];
 
+// ── URL State Management ───────────────────────────────────────────
+
+/**
+ * Parse URL search params and update fret selection
+ */
+function parseUrlParams() {
+  const params = new URLSearchParams(window.location.search);
+  
+  if (params.has('frets')) {
+    const fretsStr = params.get('frets');
+    const frets = fretsStr.split(',').map(f => parseInt(f, 10));
+    if (frets.length === 4 && frets.every(f => !isNaN(f) && f >= 0 && f <= 12)) {
+      for (let i = 0; i < 4; i++) {
+        selectedFrets[i] = frets[i];
+      }
+    }
+  }
+}
+
+/**
+ * Update URL to reflect current fret selection
+ */
+function updateUrl() {
+  const params = new URLSearchParams();
+  params.set('frets', selectedFrets.join(','));
+  const newUrl = `${window.location.pathname}?${params.toString()}`;
+  window.history.replaceState(null, '', newUrl);
+}
+
 // ── Fretboard SVG ───────────────────────────────────────────
 
 function renderFretboard() {
@@ -129,12 +158,14 @@ function onFretClick(e) {
 
   renderFretboard();
   renderResult();
+  updateUrl();
 }
 
 function clearFretboard() {
   for (let i = 0; i < 4; i++) selectedFrets[i] = 0;
   renderFretboard();
   renderResult();
+  updateUrl();
 }
 
 // ── Result rendering ────────────────────────────────────────
@@ -198,9 +229,15 @@ function renderResult() {
 // ── Boot ────────────────────────────────────────────────────
 
 document.addEventListener('DOMContentLoaded', () => {
+  // Parse URL parameters
+  parseUrlParams();
+
   renderFretboard();
   renderResult();
   applyTheme(currentTheme());
+  
+  // Update URL to match current state
+  updateUrl();
 
   document.getElementById('theme-toggle').addEventListener('click', toggleTheme);
   document.getElementById('clear-btn').addEventListener('click', clearFretboard);

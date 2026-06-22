@@ -24,6 +24,55 @@ const state = {
   mixedOnly: false,
 };
 
+// ── URL State Management ────────────────────────────────────────
+
+/**
+ * Parse URL search params and update state
+ */
+function parseUrlParams() {
+  const params = new URLSearchParams(window.location.search);
+  
+  if (params.has('key')) {
+    const keyIndex = parseInt(params.get('key'), 10);
+    if (!isNaN(keyIndex) && keyIndex >= 0 && keyIndex <= 11) {
+      state.root = keyIndex;
+    }
+  }
+  
+  if (params.has('type')) {
+    const type = params.get('type');
+    if (type === 'all' || CHORD_TYPES.some(ct => ct.id === type)) {
+      state.type = type;
+    }
+  }
+  
+  if (params.has('mixed')) {
+    state.mixedOnly = params.get('mixed') === 'true';
+  }
+}
+
+/**
+ * Update URL to reflect current state
+ */
+function updateUrl() {
+  const params = new URLSearchParams();
+  
+  if (state.root !== null) {
+    params.set('key', state.root);
+  }
+  
+  if (state.type !== 'all') {
+    params.set('type', state.type);
+  }
+  
+  if (state.mixedOnly) {
+    params.set('mixed', 'true');
+  }
+  
+  const newUrl = `${window.location.pathname}?${params.toString()}`;
+  window.history.replaceState(null, '', newUrl);
+}
+
 // ── Selection / detail strip ────────────────────────────────
 
 let currentCard = null;
@@ -160,23 +209,29 @@ function selectKey(root) {
   state.root = root;
   renderKeys();
   renderContent();
+  updateUrl();
 }
 
 function selectType(type) {
   state.type = type;
   renderTypes();
   renderContent();
+  updateUrl();
 }
 
 function toggleMixed() {
   state.mixedOnly = !state.mixedOnly;
   renderTypes();
   renderContent();
+  updateUrl();
 }
 
 // ── Boot ────────────────────────────────────────────────────
 
 document.addEventListener('DOMContentLoaded', () => {
+  // Parse URL parameters
+  parseUrlParams();
+
   renderKeys();
   renderTypes();
   renderTuningToggle('tuning-toggle', renderContent);
