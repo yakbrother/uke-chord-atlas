@@ -241,3 +241,46 @@
     width: 100%;
   }
 }
+
+/* Strumming patterns */
+.id-strumming {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+}
+
+.id-strumming-label {
+  font-family: 'Jost', sans-serif;
+  font-weight: 500;
+  font-size: 11px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 8px;
+}
+
+.id-strumming-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.id-strumming-chip {
+  font-family: 'Jost', sans-serif;
+  font-weight: 500;
+  font-size: 11px;
+  color: var(--text);
+  padding: 4px 10px;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  letter-spacing: 0.5px;
+  background: var(--surface-3);
+}
+
+.strum-down, .strum-up, .strum-rest {
+  font-size: 14px;
+  line-height: 1;
+}
+.strum-down { color: var(--accent); }
+.strum-up { color: var(--secondary); }
+.strum-rest { color: var(--text-muted); opacity: 0.6; }

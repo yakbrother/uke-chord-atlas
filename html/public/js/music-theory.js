@@ -295,4 +295,25 @@ function getProgressionSuggestions(root, typeId) {
   }
 
   return suggestions;
+// STRUMMING PATTERNS
+// ═══════════════════════════════════════════════════════════
+
+// Common strumming patterns (D = Down, U = Up, - = rest)
+const STRUMMING_PATTERNS = [
+  { name: 'Basic',      pattern: ['D', 'D', 'U', 'U', 'D'] },
+  { name: 'Common',     pattern: ['D', 'D', 'D', 'U', 'D'] },
+  { name: 'Island',     pattern: ['D', 'D', 'U', '-', 'U', 'D'] },
+  { name: 'Folk',       pattern: ['D', 'U', 'D', 'U', 'D'] },
+  { name: 'Reggae',     pattern: ['D', '-', '-', 'U', 'D', '-', 'U'] },
+  { name: 'Ska',        pattern: ['D', 'U', 'D', 'U', 'D', 'U', 'D', 'U'] },
+  { name: 'Ballad',     pattern: ['D', '-', 'D', '-', 'U', '-', 'D'] },
+  { name: 'Upbeat',     pattern: ['D', 'D', 'U', 'D', 'U', 'D'] },
+];
+
+/**
+ * Get strumming pattern suggestions
+ * @returns {Array} Array of strumming patterns with name and pattern
+ */
+function getStrummingPatterns() {
+  return STRUMMING_PATTERNS;
 }

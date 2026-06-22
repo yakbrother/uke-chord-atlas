@@ -221,6 +221,21 @@ function renderResult() {
       });
       html += `</div></div>`;
     }
+  // Add strumming pattern suggestions
+  const patterns = getStrummingPatterns();
+  if (patterns.length > 0) {
+    html += `<div class="id-strumming">`;
+    html += `<div class="id-strumming-label">Strumming patterns:</div>`;
+    html += `<div class="id-strumming-list">`;
+    patterns.forEach(p => {
+      const patternDisplay = p.pattern.map(s => 
+        s === '-' ? '<span class="strum-rest">•</span>' : 
+        s === 'D' ? '<span class="strum-down">↓</span>' : 
+        '<span class="strum-up">↑</span>'
+      ).join('');
+      html += `<span class="id-strumming-chip">${p.name}: ${patternDisplay}</span>`;
+    });
+    html += `</div></div>`;
   }
 
   container.innerHTML = html;
