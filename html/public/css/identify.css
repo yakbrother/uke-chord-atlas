@@ -194,6 +194,41 @@
   margin-left: 4px;
 }
 
+/* Chord progression suggestions */
+.id-progressions {
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+}
+
+.id-progression-label {
+  font-family: 'Jost', sans-serif;
+  font-weight: 500;
+  font-size: 11px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 8px;
+}
+
+.id-progression-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.id-progression-chip {
+  font-family: 'Jost', sans-serif;
+  font-weight: 500;
+  font-size: 12px;
+  color: var(--text);
+  padding: 4px 10px;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  letter-spacing: 0.5px;
+  background: var(--surface-3);
+}
+
 /* ── Responsive ────────────────────────────────────────────── */
 
 @media (max-width: 600px) {

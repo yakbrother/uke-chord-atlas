@@ -178,6 +178,20 @@ function renderResult() {
     html += `</div>`;
   }
 
+  // Add chord progression suggestions
+  if (primary.root !== undefined && primary.type && primary.type.id) {
+    const progressions = getProgressionSuggestions(primary.root, primary.type.id);
+    if (progressions.length > 0) {
+      html += `<div class="id-progressions">`;
+      html += `<div class="id-progression-label">Common progressions:</div>`;
+      html += `<div class="id-progression-list">`;
+      progressions.forEach(p => {
+        html += `<span class="id-progression-chip">${p.name}: ${p.chords.join(' - ')}</span>`;
+      });
+      html += `</div></div>`;
+    }
+  }
+
   container.innerHTML = html;
 }
 
