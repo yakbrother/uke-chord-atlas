@@ -1,102 +1,39 @@
 // ═══════════════════════════════════════════════════════════
 // PROGRESSION DECK DATA (algorithmically generated)
-// Custom deck names and descriptions - not replicating chord_files IP
+// Custom deck names and descriptions
+// Reuses NOTE_NAMES_FLAT, FLAT_KEYS from music-theory.js
 // ═══════════════════════════════════════════════════════════
 
-// All 12 chromatic roots
-const ROOTS = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
-const FLAT_ROOTS = ['C', 'Db', 'D', 'Eb', 'E', 'F', 'Gb', 'G', 'Ab', 'A', 'Bb', 'B'];
-
-// Flatten for simpler use
-const ALL_ROOTS = ['C', 'Db', 'D', 'Eb', 'E', 'F', 'Gb', 'G', 'Ab', 'A', 'Bb', 'B'];
-
-// Roman numeral to scale degree mapping
-const ROMAN_TO_DEGREE = {
-  'I': 1, 'i': 1,
-  'II': 2, 'ii': 2,
-  'III': 3, 'iii': 3,
-  'IV': 4, 'iv': 4,
-  'V': 5, 'v': 5,
-  'VI': 6, 'vi': 6,
-  'VII': 7, 'vii': 7,
-  'vii°': 7
-};
-
-// Major scale chord types for each degree
-const MAJOR_SCALE_CHORDS = [
-  null, // 0
-  'maj',  // I
-  'min',  // ii
-  'min',  // iii
-  'maj',  // IV
-  'maj',  // V
-  'min',  // vi
-  'dim'   // vii°
-];
-
-// Minor scale chord types (natural minor)
-const MINOR_SCALE_CHORDS = [
-  null, // 0
-  'min',  // i
-  'dim',  // ii°
-  'maj',  // III
-  'min',  // iv
-  'min',  // v
-  'maj',  // VI
-  'maj'   // VII
-];
+// Semitone offsets for each scale degree (1-based index)
+const MAJOR_OFFSETS = [null, 0, 2, 4, 5, 7, 9, 11];
+const MINOR_OFFSETS = [null, 0, 2, 3, 5, 7, 8, 10];
 
 /**
- * Resolve a Roman numeral to a chord name in a given key
- * @param {string} roman - Roman numeral (e.g., 'I', 'iv', 'V7')
- * @param {string} key - The key (e.g., 'C', 'G')
- * @param {boolean} isMinor - Whether the key is minor
- * @returns {string} The chord name
+ * Resolve a numeric scale degree to a chord name in a given key
+ * @param {number} degree - Scale degree 1-7
+ * @param {string} key - Root note (e.g., 'C', 'Ab')
+ * @param {boolean} isMinorKey - Whether the key is minor
+ * @param {string} suffix - Optional suffix (e.g., '7', 'maj7')
+ * @returns {string} The chord name (e.g., 'G', 'Dm', 'Bbdim')
  */
-function romanToChord(roman, key, isMinor) {
-  // Extract base roman and any suffix (like '7', 'maj7', etc.)
-  const suffixMatch = roman.match(/^([ivIV]+°?)(.*)$/);
-  if (!suffixMatch) return roman;
+function degreeToChord(degree, key, isMinorKey, suffix) {
+  const keyIndex = NOTE_NAMES_FLAT.indexOf(key);
+  if (keyIndex === -1 || degree < 1 || degree > 7) return key;
 
-  const baseRoman = suffixMatch[1];
-  const suffix = suffixMatch[2];
+  const offsets = isMinorKey ? MINOR_OFFSETS : MAJOR_OFFSETS;
+  const chordRootIndex = (keyIndex + offsets[degree]) % 12;
+  const chordRoot = rootNoteName(chordRootIndex);
 
-  const degree = ROMAN_TO_DEGREE[baseRoman];
-  if (degree === undefined) return roman;
+  // Chord quality from scale degree
+  const chordType = getChordTypeForDegree(degree, isMinorKey);
 
-  // Find the root note index
-  const keyIndex = ALL_ROOTS.indexOf(key);
-  if (keyIndex === -1) return roman;
-
-  // Calculate the chord root
-  const scaleChords = isMinor ? MINOR_SCALE_CHORDS : MAJOR_SCALE_CHORDS;
-  
-  // For degree, map to semitones from tonic
-  // Major: I=0, ii=2, iii=4, IV=5, V=7, vi=9, vii°=11
-  // Minor: i=0, ii°=2, III=3, iv=5, v=7, VI=8, VII=10
-  const majorOffsets = [0, 2, 4, 5, 7, 9, 11];
-  const minorOffsets = [0, 2, 3, 5, 7, 8, 10];
-  
-  const offsets = isMinor ? minorOffsets : majorOffsets;
-  const semitoneOffset = offsets[degree - 1];
-  
-  const chordRootIndex = (keyIndex + semitoneOffset) % 12;
-  const chordRoot = ALL_ROOTS[chordRootIndex];
-
-  // Determine base chord type
-  const chordType = scaleChords[degree];
-  
-  // Special case for vii° in major
-  const isDiminished = (baseRoman === 'vii°') || (isMinor && baseRoman === 'ii') || (baseRoman === 'ii°');
-  const finalType = isDiminished ? 'dim' : (chordType || 'maj');
-
-  // Build chord name
   let chordName = chordRoot;
-  if (finalType !== 'maj') {
-    chordName += finalType;
+  if (chordType !== 'maj') {
+    chordName += chordType;
   }
-  chordName += suffix;
-
+  if (suffix) {
+    chordName += suffix;
+  }
   return chordName;
 }
 
@@ -128,9 +65,9 @@ function generateDecks() {
       { name: 'ii-IV-V', pattern: [2, 4, 5], description: 'Minor start, major resolution' }
     ],
     'Minor Moods': [
-      { name: 'i-IV-V', pattern: [1, 4, 5], description: 'Minor blues foundation' },
+      { name: 'i-iv-v', pattern: [1, 4, 5], description: 'Natural minor classic — all minor chords' },
       { name: 'i-VI-III-VII', pattern: [1, 6, 3, 7], description: 'Dark and mysterious minor progression' },
-      { name: 'i-iv-V', pattern: [1, 4, 5], description: 'Natural minor classic' },
+      { name: 'i-iv-VII', pattern: [1, 4, 7], description: 'Modal minor with a flat-seven lift' },
       { name: 'i-VI-iv-V', pattern: [1, 6, 4, 5], description: 'Minor variation on the pop progression' }
     ],
     'Turnarounds': [
@@ -158,16 +95,16 @@ function generateDecks() {
       progressions: []
     };
 
+    const MAJOR_ROMAN = ['I', 'ii', 'iii', 'IV', 'V', 'vi', 'vii°'];
+    const MINOR_ROMAN = ['i', 'ii°', 'III', 'iv', 'v', 'VI', 'VII'];
+
     // Generate progressions for each pattern in all 12 keys
     for (const pattern of patterns) {
       // Generate for major keys
-      for (const key of ALL_ROOTS) {
-        const chords = pattern.pattern.map(deg => romanToChord(deg.toString(), key, false));
-        const roman = pattern.pattern.map(deg => {
-          const romanNums = ['I', 'ii', 'iii', 'IV', 'V', 'vi', 'vii°'];
-          return romanNums[deg - 1] || deg.toString();
-        });
-        
+      for (const key of NOTE_NAMES_FLAT) {
+        const chords = pattern.pattern.map(deg => degreeToChord(deg, key, false));
+        const roman = pattern.pattern.map(deg => MAJOR_ROMAN[deg - 1] || String(deg));
+
         deck.progressions.push({
           id: `${deckId}-${pattern.name.toLowerCase().replace(/[^a-z]/g, '-')}-${key.toLowerCase().replace('#', 's')}`,
           key: key,
@@ -180,14 +117,11 @@ function generateDecks() {
       }
 
       // Generate for minor keys
-      for (const key of ALL_ROOTS) {
+      for (const key of NOTE_NAMES_FLAT) {
         const minorKey = key + 'm';
-        const chords = pattern.pattern.map(deg => romanToChord(deg.toString(), key, true));
-        const roman = pattern.pattern.map(deg => {
-          const romanNums = ['i', 'ii°', 'III', 'iv', 'v', 'VI', 'VII'];
-          return romanNums[deg - 1] || deg.toString().toLowerCase();
-        });
-        
+        const chords = pattern.pattern.map(deg => degreeToChord(deg, key, true));
+        const roman = pattern.pattern.map(deg => MINOR_ROMAN[deg - 1] || String(deg));
+
         deck.progressions.push({
           id: `${deckId}-${pattern.name.toLowerCase().replace(/[^a-z]/g, '-')}-${key.toLowerCase().replace('#', 's')}-min`,
           key: minorKey,

@@ -7,7 +7,6 @@
 let currentDeck = null;
 let currentProgressionIndex = 0;
 let isFlipped = false;
-let selectedKeyFilter = null; // null = all keys, otherwise filter by specific key
 
 // DOM elements
 const deckGrid = document.getElementById('deck-grid');
@@ -101,21 +100,25 @@ function setupEventListeners() {
 
     switch (e.key) {
       case 'ArrowLeft':
+        e.preventDefault();
         showPrevious();
         break;
       case 'ArrowRight':
+        e.preventDefault();
         showNext();
         break;
       case 'ArrowUp':
-      case 'ArrowDown':
-        // Step through progressions
-        if (e.key === 'ArrowUp') showPrevious();
-        if (e.key === 'ArrowDown') showNext();
-        break;
-      case 'Space':
-      case 'Enter':
-        toggleFlip();
         e.preventDefault();
+        showPrevious();
+        break;
+      case 'ArrowDown':
+        e.preventDefault();
+        showNext();
+        break;
+      case ' ':
+      case 'Enter':
+        e.preventDefault();
+        toggleFlip();
         break;
       case 'Escape':
         showDeckList();
@@ -123,7 +126,6 @@ function setupEventListeners() {
     }
   });
 
-  // Key filter - could add later if needed
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -366,7 +368,7 @@ function renderCardBack(progression) {
         rootIndex,
         selectedVoicing.frets.some(f => f === 0) && selectedVoicing.frets.some(f => f > 0)
       );
-      wrapper.innerHTML += svg;
+      wrapper.insertAdjacentHTML('beforeend', svg);
       
       diagramStrip.appendChild(wrapper);
     }
