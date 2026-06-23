@@ -1,7 +1,7 @@
 // ═══════════════════════════════════════════════════════════
 // TUNING MODULE (shared)
-// Handles standard GCEA and baritone DGBE tuning
-// Depends on: music-theory.js (currentTuning, setTuning, isBaritone)
+// Handles standard GCEA, low-G, and baritone DGBE tuning
+// Depends on: music-theory.js (currentTuning, setTuning, isBaritone, isLowG)
 // ═══════════════════════════════════════════════════════════
 
 /**
@@ -13,9 +13,12 @@ function renderTuningToggle(containerId, onSwitchCallback) {
   const container = document.getElementById(containerId);
   if (!container) return;
 
+  const tuning = currentTuning || 'standard';
+
   container.innerHTML = `
-    <button type="button" class="tuning-btn" aria-pressed="${!isBaritone()}" data-tuning="standard">Standard</button>
-    <button type="button" class="tuning-btn" aria-pressed="${isBaritone()}" data-tuning="baritone">Baritone</button>
+    <button type="button" class="tuning-btn" aria-pressed="${tuning === 'standard'}" data-tuning="standard">Standard</button>
+    <button type="button" class="tuning-btn" aria-pressed="${tuning === 'lowg'}" data-tuning="lowg">Low-G</button>
+    <button type="button" class="tuning-btn" aria-pressed="${tuning === 'baritone'}" data-tuning="baritone">Baritone</button>
   `;
 
   container.addEventListener('click', e => {
@@ -29,7 +32,7 @@ function renderTuningToggle(containerId, onSwitchCallback) {
 
 /**
  * Switch to a different tuning
- * @param {string} tuning - 'standard' or 'baritone'
+ * @param {string} tuning - 'standard', 'lowg', or 'baritone'
  */
 function switchTuning(tuning) {
   setTuning(tuning);

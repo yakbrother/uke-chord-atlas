@@ -239,6 +239,88 @@ function identifyChord(frets) {
 }
 
 // ═══════════════════════════════════════════════════════════
+// SCALE TONES
+// ═══════════════════════════════════════════════════════════
+
+// Major and natural minor scale intervals (in semitones from root)
+const MAJOR_SCALE = [0, 2, 4, 5, 7, 9, 11, 12];
+const MINOR_SCALE = [0, 2, 3, 5, 7, 8, 10, 12];
+
+/**
+ * Get the scale tones for a given chord name
+ * Returns the notes in the parent scale of the chord
+ * @param {string} chordName - The chord name (e.g., "C", "G7", "Am")
+ * @returns {Array} Array of note names in the scale
+ */
+function getScaleTones(chordName) {
+  if (!chordName) return [];
+
+  // Extract root from chord name
+  const rootMatch = chordName.match(/^([A-G][#b]?)/);
+  if (!rootMatch) return [];
+
+  const rootName = rootMatch[1];
+  const root = NOTE_NAMES.indexOf(rootName) !== -1 
+    ? NOTE_NAMES.indexOf(rootName)
+    : NOTE_NAMES_FLAT.indexOf(rootName);
+
+  if (root === -1) return [];
+
+  // Determine if minor based on chord name
+  const chordType = chordName.slice(rootName.length);
+  const isMinor = chordType.startsWith('m') || chordType.startsWith('min');
+
+  // Get scale intervals
+  const scaleIntervals = isMinor ? MINOR_SCALE : MAJOR_SCALE;
+
+  // Map intervals to note names, using the same naming convention as the root
+  const useFlats = FLAT_KEYS.has(root);
+  const noteNames = useFlats ? NOTE_NAMES_FLAT : NOTE_NAMES;
+
+  return scaleIntervals.slice(0, 7).map(interval => {
+    const noteIndex = (root + interval) % 12;
+    return noteNames[noteIndex];
+  });
+}
+
+/**
+ * Get the chord tones (constituent notes) for a given chord name
+ * @param {string} chordName - The chord name (e.g., "C", "G7", "Am")
+ * @returns {Array} Array of note names that make up the chord
+ */
+function getChordTones(chordName) {
+  if (!chordName) return [];
+
+  // Extract root from chord name
+  const rootMatch = chordName.match(/^([A-G][#b]?)/);
+  if (!rootMatch) return [];
+
+  const rootName = rootMatch[1];
+  const root = NOTE_NAMES.indexOf(rootName) !== -1 
+    ? NOTE_NAMES.indexOf(rootName)
+    : NOTE_NAMES_FLAT.indexOf(rootName);
+
+  if (root === -1) return [];
+
+  // Find the chord type
+  const chordTypeStr = chordName.slice(rootName.length);
+  const chordType = CHORD_TYPES.find(ct => 
+    ct.id === chordTypeStr || ct.label === chordTypeStr
+  );
+
+  if (!chordType) return [];
+
+  // Map intervals to note names
+  const useFlats = FLAT_KEYS.has(root);
+  const noteNames = useFlats ? NOTE_NAMES_FLAT : NOTE_NAMES;
+
+  return chordType.tones.map(interval => {
+    const noteIndex = (root + interval) % 12;
+    return noteNames[noteIndex];
+  });
+}
+
+// ═══════════════════════════════════════════════════════════
 // CHORD PROGRESSION SUGGESTIONS
 // ═══════════════════════════════════════════════════════════
 
@@ -295,6 +377,9 @@ function getProgressionSuggestions(root, typeId) {
   }
 
   return suggestions;
+}
+
+// ═══════════════════════════════════════════════════════════
 // STRUMMING PATTERNS
 // ═══════════════════════════════════════════════════════════
 
