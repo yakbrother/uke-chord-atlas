@@ -1,6 +1,6 @@
 # I Let Mistral Build My Chord Progressions Feature — Here's What It Got Wrong
 
-I'm building [Uke Chord Atlas](https://ukechordatlas.com), a soundless ukulele chord reference app. Pure HTML, vanilla JS, CSS — no frameworks, no build tools. When I needed a progressions page that generates chord sequences in all 12 keys with flashcard-style navigation, I handed the spec to Mistral and let it write the feature end to end.
+I'm building [Uke Chord Atlas](https://uke-atlas.netlify.app/), a soundless ukulele chord reference app. Pure HTML, vanilla JS, CSS — no frameworks, no build tools. When I needed a progressions page that generates chord sequences in all 12 keys with flashcard-style navigation, I handed the spec to Mistral and let it write the feature end to end.
 
 The result looked impressive at first glance: ~1,200 lines across three new files, a card flip UI with keyboard nav, scale tone display, and algorithmically generated decks for six progression categories. Clean structure, good comments, solid CSS with responsive breakpoints and reduced-motion support.
 
@@ -57,4 +57,4 @@ I fixed everything in about 20 minutes. The architecture Mistral chose was fine 
 
 ---
 
-*Tim Eaton builds [Uke Chord Atlas](https://ukechordatlas.com) and writes at [timeaton.dev](https://timeaton.dev).*
+*Tim Eaton builds [Uke Chord Atlas](https://uke-atlas.netlify.app/) and writes at [timeaton.dev](https://timeaton.dev).*

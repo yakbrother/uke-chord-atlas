@@ -26,6 +26,7 @@ const flipBtn = document.getElementById('flip-btn');
 const prevBtn = document.getElementById('prev-btn');
 const nextBtn = document.getElementById('next-btn');
 const stepCounter = document.getElementById('step-counter');
+const randomBtn = document.getElementById('random-btn');
 
 // ═══════════════════════════════════════════════════════════
 // INITIALIZATION
@@ -93,6 +94,9 @@ function setupEventListeners() {
 
   // Next button
   nextBtn.addEventListener('click', showNext);
+
+  // Random button
+  randomBtn.addEventListener('click', showRandom);
 
   // Keyboard navigation
   document.addEventListener('keydown', (e) => {
@@ -426,6 +430,21 @@ function showNext() {
   if (!currentDeck) return;
 
   currentProgressionIndex = (currentProgressionIndex + 1) % currentDeck.progressions.length;
+  renderProgression();
+}
+
+/**
+ * Jump to a random progression in the current deck
+ */
+function showRandom() {
+  if (!currentDeck || currentDeck.progressions.length < 2) return;
+
+  let randomIndex;
+  do {
+    randomIndex = Math.floor(Math.random() * currentDeck.progressions.length);
+  } while (randomIndex === currentProgressionIndex);
+
+  currentProgressionIndex = randomIndex;
   renderProgression();
 }
 
