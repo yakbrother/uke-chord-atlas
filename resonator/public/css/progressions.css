@@ -1,0 +1,448 @@
+/* ═══════════════════════════════════════════════════════════
+   PROGRESSIONS PAGE — Deck grid, card viewer, navigation
+   ═══════════════════════════════════════════════════════════ */
+
+/* Layout */
+.progressions-layout {
+  min-height: 500px;
+}
+
+.view {
+  display: none;
+}
+
+.view.active {
+  display: block;
+}
+
+/* Deck list view */
+#deck-list-view {
+  padding: 28px 40px 80px;
+}
+
+.deck-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 20px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+/* Deck card */
+.deck-card {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 20px;
+  cursor: pointer;
+  transition: background 0.15s, transform 0.15s, box-shadow 0.15s;
+  text-decoration: none;
+  color: var(--text);
+  display: block;
+  position: relative;
+}
+
+.deck-card:hover {
+  background: var(--surface-3);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.deck-card:focus {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.deck-card-header {
+  margin-bottom: 12px;
+}
+
+.deck-card-title {
+  font-family: 'Jost', sans-serif;
+  font-weight: 600;
+  font-size: 18px;
+  color: var(--text);
+  letter-spacing: 1px;
+  margin-bottom: 6px;
+}
+
+.deck-card-count {
+  font-family: 'Jost', sans-serif;
+  font-size: 12px;
+  color: var(--text-muted);
+  font-style: italic;
+  letter-spacing: 1px;
+  text-transform: lowercase;
+}
+
+.deck-card-description {
+  font-family: 'Jost', sans-serif;
+  font-size: 13px;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+
+/* Card viewer view */
+#card-viewer {
+  padding: 20px 40px 80px;
+}
+
+.viewer-header {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+}
+
+.back-btn {
+  font-family: 'Jost', sans-serif;
+  font-weight: 500;
+  font-size: 13px;
+  letter-spacing: 1px;
+  padding: 8px 16px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+  flex-shrink: 0;
+}
+
+.back-btn:hover {
+  background: var(--surface-2);
+}
+
+.back-btn:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--focus) 20%, transparent);
+}
+
+.viewer-info {
+  flex: 1;
+  min-width: 200px;
+}
+
+.viewer-deck-title {
+  font-family: 'Jost', sans-serif;
+  font-weight: 600;
+  font-size: 20px;
+  color: var(--accent);
+  letter-spacing: 1px;
+  margin-bottom: 4px;
+}
+
+.viewer-progression-info {
+  font-family: 'Jost', sans-serif;
+  font-size: 13px;
+  color: var(--text-muted);
+  letter-spacing: 0.5px;
+}
+
+/* Card container */
+.card-container {
+  perspective: 1000px;
+  margin: 0 auto;
+  max-width: 800px;
+  min-height: 400px;
+  position: relative;
+}
+
+.card-face {
+  backface-visibility: hidden;
+  transition: transform 0.4s ease, opacity 0.2s;
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  padding: 40px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-2);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
+}
+
+.front {
+  transform: rotateY(0deg);
+}
+
+.back {
+  transform: rotateY(180deg);
+  opacity: 0;
+  pointer-events: none;
+}
+
+.card-container.flipped .front {
+  transform: rotateY(180deg);
+  opacity: 0;
+  pointer-events: none;
+}
+
+.card-container.flipped .back {
+  transform: rotateY(360deg);
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* Card front */
+.card-chord-sequence {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 20px;
+  flex-wrap: wrap;
+  margin-bottom: 30px;
+  min-height: 120px;
+}
+
+.chord-in-sequence {
+  font-family: 'Jost', sans-serif;
+  font-weight: 700;
+  font-size: clamp(24px, 4vw, 48px);
+  color: var(--text);
+  letter-spacing: 2px;
+  padding: 12px 20px;
+  border: 2px solid var(--accent);
+  border-radius: 6px;
+  background: var(--surface);
+}
+
+.card-roman {
+  display: flex;
+  justify-content: center;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 24px;
+  font-family: 'Jost', sans-serif;
+  font-weight: 500;
+  font-size: 16px;
+  color: var(--text-muted);
+  letter-spacing: 1px;
+}
+
+.roman-item {
+  padding: 6px 12px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+}
+
+.card-pattern-name {
+  text-align: center;
+  font-family: 'Jost', sans-serif;
+  font-weight: 500;
+  font-size: 15px;
+  color: var(--text-muted);
+  font-style: italic;
+  letter-spacing: 1px;
+  padding: 12px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+}
+
+/* Card back */
+.diagram-strip {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 24px;
+}
+
+.diagram-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.diagram-wrapper svg {
+  display: block;
+}
+.diagram-wrapper svg rect.d-bg { fill: var(--diagram-bg); }
+.diagram-wrapper svg .d-paper-line { stroke: var(--diagram-line); }
+.diagram-wrapper svg .d-nut { fill: var(--diagram-strong); }
+.diagram-wrapper svg .d-fret { stroke: var(--diagram-fret); }
+.diagram-wrapper svg .d-string { stroke: var(--diagram-string); }
+.diagram-wrapper svg .d-pos { fill: var(--diagram-muted-text); }
+.diagram-wrapper svg .d-label { fill: var(--diagram-muted-text); }
+.diagram-wrapper svg .d-mute { fill: var(--diagram-muted-text); }
+.diagram-wrapper svg .d-open { fill: none; stroke: var(--diagram-open); }
+.diagram-wrapper svg .d-open-text { fill: var(--diagram-open); }
+.diagram-wrapper svg .d-dot { fill: var(--diagram-dot); }
+.diagram-wrapper svg .d-dot-text { fill: var(--diagram-dot-text); }
+.diagram-wrapper svg .d-clash-badge { fill: #c9822c; }
+
+.chord-label-above {
+  font-family: 'Jost', sans-serif;
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--text);
+  letter-spacing: 1px;
+}
+
+.scale-tones-section {
+  text-align: center;
+}
+
+.scale-tones-title {
+  font-family: 'Jost', sans-serif;
+  font-weight: 500;
+  font-size: 12px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 12px;
+}
+
+.scale-tones-grid {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.scale-tone {
+  font-family: monospace;
+  font-weight: 500;
+  font-size: 16px;
+  padding: 8px 14px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--text);
+}
+
+/* Card controls */
+.card-controls {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 16px;
+  margin-top: 24px;
+  flex-wrap: wrap;
+}
+
+.control-btn {
+  font-family: 'Jost', sans-serif;
+  font-weight: 500;
+  font-size: 13px;
+  letter-spacing: 1px;
+  padding: 10px 20px;
+  min-height: 44px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+
+.control-btn:hover {
+  background: var(--surface-2);
+}
+
+.control-btn:focus {
+  outline: none;
+  border-color: var(--focus);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--focus) 20%, transparent);
+}
+
+.control-btn[aria-pressed="true"] {
+  background: var(--accent);
+  color: var(--accent-text);
+  border-color: var(--accent);
+}
+
+.step-controls {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 12px;
+}
+
+.step-btn {
+  padding: 10px 24px;
+}
+
+.step-counter {
+  font-family: 'Jost', sans-serif;
+  font-weight: 500;
+  font-size: 13px;
+  color: var(--text-muted);
+  letter-spacing: 1px;
+  padding: 10px 16px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+}
+
+/* Responsive */
+@media (max-width: 600px) {
+  #deck-list-view {
+    padding: 20px 16px 80px;
+  }
+
+  .deck-grid {
+    grid-template-columns: 1fr;
+  }
+
+  #card-viewer {
+    padding: 20px 16px 80px;
+  }
+
+  .viewer-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .card-container {
+    padding: 24px 16px;
+  }
+
+  .card-face {
+    padding: 24px 16px;
+  }
+
+  .chord-in-sequence {
+    font-size: 28px;
+    padding: 8px 12px;
+  }
+
+  .card-controls {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .step-controls {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .step-btn {
+    width: 100%;
+  }
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .card-face {
+    transition: none;
+  }
+
+  .card-container.flipped .front,
+  .card-container.flipped .back {
+    opacity: 1;
+    pointer-events: auto;
+    transform: none;
+  }
+
+  .card-container:not(.flipped) .back {
+    opacity: 0;
+    pointer-events: none;
+    position: absolute;
+  }
+}

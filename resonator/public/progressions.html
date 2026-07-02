@@ -5,9 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="color-scheme" content="light dark">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:">
-<meta name="description" content="Browse curated chord progressions in any key, see each chord's diagram and scale tones, and step through sequences like flipping cards.">
+<meta name="description" content="Browse curated chord progressions in any key for resonator guitar in Open D and Open Dm, see each chord's fingerstyle drone diagram, and step through sequences like flipping cards.">
 <meta name="author" content="Tim Eaton">
-<title>Progressions — Uke Chord Atlas</title>
+<title>Progressions — Reso Chord Atlas</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Jost:wght@300;400;500;600;700&family=Pacifico&display=swap" rel="stylesheet">
@@ -18,7 +18,7 @@
   // Resolve theme before first paint to avoid a flash of the wrong theme.
   (function () {
     try {
-      const saved = localStorage.getItem('uca-theme');
+      const saved = localStorage.getItem('rca-theme');
       const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
       const theme = saved || (prefersDark ? 'dark' : 'light');
       document.documentElement.setAttribute('data-theme', theme);
@@ -32,7 +32,7 @@
 
   <header>
     <div class="header-top">
-      <h1>Uke Chord Atlas</h1>
+      <h1>Reso Chord Atlas</h1>
       <span class="subtitle">progression decks · all keys</span>
     </div>
     <div class="header-controls">
@@ -48,7 +48,7 @@
         <a href="identify.html">Identifier</a>
         <a href="progressions.html" aria-current="page">Progressions</a>
       </nav>
-      <a href="../../resonator/public/progressions.html" class="app-switch-link">Reso Chord Atlas &#8594;</a>
+      <a href="../../html/public/progressions.html" class="app-switch-link">&#8592; Uke Chord Atlas</a>
       <div class="tuning-toggle" id="tuning-toggle" role="group" aria-label="Tuning">
         <!-- filled by JS -->
       </div>
@@ -130,6 +130,7 @@
 
 </div>
 
+<script src="js/instrument.js"></script>
 <script src="js/music-theory.js"></script>
 <script src="js/diagram.js"></script>
 <script src="js/theme.js"></script>
