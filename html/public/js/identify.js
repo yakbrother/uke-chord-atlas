@@ -221,6 +221,8 @@ function renderResult() {
       });
       html += `</div></div>`;
     }
+  }
+
   // Add strumming pattern suggestions
   const patterns = getStrummingPatterns();
   if (patterns.length > 0) {

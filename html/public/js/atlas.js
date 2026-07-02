@@ -72,6 +72,8 @@ function updateUrl() {
   
   const newUrl = `${window.location.pathname}?${params.toString()}`;
   window.history.replaceState(null, '', newUrl);
+}
+
 // ── Search ───────────────────────────────────────────────────────
 
 function setSearchQuery(query) {
