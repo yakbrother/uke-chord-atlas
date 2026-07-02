@@ -431,11 +431,12 @@ function getChordTypeForDegree(degree, isMinor) {
  */
 function getProgressionSuggestions(root, typeId) {
   const isMinor = typeId === 'min' || typeId === 'm7' || typeId === 'm9' || typeId === 'mmaj7';
+  const scale = isMinor ? MINOR_SCALE : MAJOR_SCALE;
   const suggestions = [];
 
   for (const pattern of PROGRESSION_PATTERNS) {
     const chords = pattern.pattern.map(degree => {
-      const chordRoot = (root + degree - 1) % 12;
+      const chordRoot = (root + scale[degree - 1]) % 12;
       const chordType = getChordTypeForDegree(degree, isMinor);
       const rootName = rootNoteName(chordRoot);
       const label = chordType === 'maj' ? rootName : rootName + chordType;
