@@ -5,7 +5,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
 
-const JS_DIR = path.join(__dirname, '..', '..', 'resonator', 'public', 'js');
+const JS_DIR = path.join(__dirname, '..', '..', 'html', 'public', 'resonator', 'js');
 
 function loadResonatorEngine() {
   const sandbox = {
