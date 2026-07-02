@@ -5,34 +5,35 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="color-scheme" content="light dark">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:;">
-<meta name="description" content="Tap frets on an interactive resonator guitar fretboard and instantly identify the chord — Open D and Open Dm tuning, mutable strings.">
+<meta name="description" content="A soundless reference for resonator guitar chord voicings across all 12 keys — fingerstyle drone shapes plus full 6-string barre/slide shapes, in Open D and Open Dm tuning.">
 <meta name="author" content="Tim Eaton">
-<title>Chord Identifier — Reso Chord Atlas</title>
+<title>Reso Chord Atlas</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Jost:wght@300;400;500;600;700&family=Pacifico&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/shared.css">
-<link rel="stylesheet" href="css/identify.css">
+<link rel="stylesheet" href="css/atlas.css">
 <link rel="stylesheet" href="css/print.css" media="print">
 <script>
+  // Resolve theme before first paint to avoid a flash of the wrong theme.
   (function () {
     try {
       const saved = localStorage.getItem('rca-theme');
       const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
       const theme = saved || (prefersDark ? 'dark' : 'light');
       document.documentElement.setAttribute('data-theme', theme);
-    } catch (e) {}
+    } catch (e) { /* localStorage may be unavailable */ }
   })();
 </script>
 </head>
 <body>
-<a href="#fretboard-container" class="skip-link">Skip to main content</a>
+<a href="#chord-content" class="skip-link">Skip to main content</a>
 <div id="app">
 
   <header>
     <div class="header-top">
       <h1>Reso Chord Atlas</h1>
-      <span class="subtitle">chord identifier · open tunings</span>
+      <span class="subtitle">all keys · fingerstyle drone &amp; barre voicings · open tunings</span>
     </div>
     <div class="header-controls">
       <button type="button" class="theme-toggle" id="theme-toggle" aria-label="Switch to dark theme">
@@ -43,28 +44,37 @@
 
     <div class="nav-row">
       <nav class="site-nav" aria-label="Site navigation">
-        <a href="index.html">Atlas</a>
-        <a href="identify.html" aria-current="page">Identifier</a>
+        <a href="index.html" aria-current="page">Atlas</a>
+        <a href="identify.html">Identifier</a>
         <a href="progressions.html">Progressions</a>
       </nav>
-      <a href="../../html/public/identify.html" class="app-switch-link">&#8592; Uke Chord Atlas</a>
+      <a href="../index.html" class="app-switch-link">&#8592; Uke Chord Atlas</a>
       <div class="tuning-toggle" id="tuning-toggle" role="group" aria-label="Tuning">
         <!-- filled by JS -->
       </div>
     </div>
+
+    <div class="search-row">
+      <label for="chord-search" class="visually-hidden">Search chords</label>
+      <input type="text" id="chord-search" class="search-input" placeholder="Search chords (e.g., Dmaj7, Gm)" aria-label="Search chords">
+      <button type="button" id="search-clear" class="search-clear" aria-label="Clear search">×</button>
+    </div>
+
+    <fieldset class="key-fieldset">
+      <legend class="visually-hidden">Key</legend>
+      <div class="key-row" id="key-row" role="group" aria-label="Select key">
+        <!-- filled by JS -->
+      </div>
+    </fieldset>
   </header>
 
-  <main class="identify-layout">
-    <div>
-      <div id="fretboard-container" role="application" aria-label="Interactive resonator guitar fretboard — click to select frets, click the top row to mute a string">
-        <!-- SVG rendered by JS -->
-      </div>
-      <button type="button" class="clear-btn" id="clear-btn">Clear all</button>
-    </div>
+  <fieldset class="type-row" id="type-row">
+    <legend class="visually-hidden">Chord type</legend>
+    <!-- filled by JS -->
+  </fieldset>
 
-    <div id="identify-result" aria-live="polite">
-      <!-- filled by JS -->
-    </div>
+  <main id="chord-content" aria-live="polite">
+    <div class="empty">Select a key above to begin.</div>
   </main>
 
   <footer class="site-footer" role="contentinfo">
@@ -78,10 +88,14 @@
 
 </div>
 
+<div class="info-strip" id="info-strip" role="status" aria-live="polite"></div>
+
 <script src="js/instrument.js"></script>
 <script src="js/music-theory.js"></script>
+<script src="js/diagram.js"></script>
 <script src="js/theme.js"></script>
 <script src="js/tuning.js"></script>
-<script src="js/identify.js"></script>
+<script src="js/favorites.js"></script>
+<script src="js/atlas.js"></script>
 </body>
 </html>
