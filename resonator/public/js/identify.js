@@ -1,27 +1,28 @@
 // ═══════════════════════════════════════════════════════════
-// CHORD IDENTIFIER PAGE
-// Depends on: music-theory.js, theme.js, tuning.js
+// CHORD IDENTIFIER PAGE (resonator guitar)
+// Depends on: instrument.js, music-theory.js, theme.js, tuning.js
 // ═══════════════════════════════════════════════════════════
 
-const MAX_FRET = 12;
-
-// Current fret selection per string [G, C, E, A] — 0 = open
-const selectedFrets = [0, 0, 0, 0];
+// Current fret selection per string, low -> high. 0 = open, null = muted.
+let selectedFrets = new Array(stringCount()).fill(0);
 
 // ── URL State Management ───────────────────────────────────────────
 
 /**
- * Parse URL search params and update fret selection
+ * Parse URL search params and update fret selection.
+ * `x` encodes a muted string (e.g. "x,0,2,2,x,0").
  */
 function parseUrlParams() {
   const params = new URLSearchParams(window.location.search);
-  
+
   if (params.has('frets')) {
     const fretsStr = params.get('frets');
-    const frets = fretsStr.split(',').map(f => parseInt(f, 10));
-    if (frets.length === 4 && frets.every(f => !isNaN(f) && f >= 0 && f <= 12)) {
-      for (let i = 0; i < 4; i++) {
-        selectedFrets[i] = frets[i];
+    const parts = fretsStr.split(',');
+    const n = stringCount();
+    if (parts.length === n) {
+      const frets = parts.map(p => (p === 'x' ? null : parseInt(p, 10)));
+      if (frets.every(f => f === null || (!isNaN(f) && f >= 0 && f <= MAX_FRET))) {
+        selectedFrets = frets;
       }
     }
   }
@@ -32,22 +33,25 @@ function parseUrlParams() {
  */
 function updateUrl() {
   const params = new URLSearchParams();
-  params.set('frets', selectedFrets.join(','));
+  params.set('frets', selectedFrets.map(f => (f === null ? 'x' : f)).join(','));
   const newUrl = `${window.location.pathname}?${params.toString()}`;
   window.history.replaceState(null, '', newUrl);
 }
 
 // ── Fretboard SVG ───────────────────────────────────────────
 
+// Guitar-style position markers (single dots + double dot at 12)
+const SINGLE_MARKER_FRETS = [3, 5, 7, 9, 15, 17, 19];
+
 function renderFretboard() {
-  const STRINGS = 4;
+  const STRINGS = stringCount();
   const FRETS = MAX_FRET;
 
   // Layout constants
   const leftMargin = 42;   // room for fret numbers
   const topMargin = 36;    // room for open-string note labels
-  const cellW = 52;        // horizontal spacing between strings
-  const cellH = 38;        // vertical spacing between frets
+  const cellW = 40;        // horizontal spacing between strings
+  const cellH = 26;        // vertical spacing between frets
   const rightPad = 20;
   const bottomPad = 28;    // room for string names
 
@@ -56,7 +60,7 @@ function renderFretboard() {
   const W = leftMargin + gridW + rightPad;
   const H = topMargin + gridH + bottomPad;
 
-  let svg = `<svg id="fretboard-svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Interactive ukulele fretboard">`;
+  let svg = `<svg id="fretboard-svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Interactive resonator guitar fretboard">`;
 
   // Background
   svg += `<rect class="fb-bg" x="0" y="0" width="${W}" height="${H}" rx="4"/>`;
@@ -73,20 +77,22 @@ function renderFretboard() {
   // Strings
   for (let s = 0; s < STRINGS; s++) {
     const x = leftMargin + s * cellW;
-    svg += `<line class="fb-string-line" x1="${x}" y1="${topMargin}" x2="${x}" y2="${topMargin + gridH}" stroke-width="${1.2 + s * 0.2}"/>`;
+    svg += `<line class="fb-string-line" x1="${x}" y1="${topMargin}" x2="${x}" y2="${topMargin + gridH}" stroke-width="${1.2 + s * 0.15}"/>`;
   }
 
-  // Position dots (standard uke markers at 5, 7, 10, 12)
-  const markerFrets = [5, 7, 10];
+  // Position dots (guitar markers)
   const midX = leftMargin + gridW / 2;
-  for (const mf of markerFrets) {
+  for (const mf of SINGLE_MARKER_FRETS) {
+    if (mf > FRETS) continue;
     const cy = topMargin + (mf - 0.5) * cellH;
     svg += `<circle class="fb-marker" cx="${midX}" cy="${cy}" r="4"/>`;
   }
   // Double dot at 12
-  const cy12 = topMargin + (12 - 0.5) * cellH;
-  svg += `<circle class="fb-marker" cx="${midX - 12}" cy="${cy12}" r="3.5"/>`;
-  svg += `<circle class="fb-marker" cx="${midX + 12}" cy="${cy12}" r="3.5"/>`;
+  if (FRETS >= 12) {
+    const cy12 = topMargin + (12 - 0.5) * cellH;
+    svg += `<circle class="fb-marker" cx="${midX - 10}" cy="${cy12}" r="3.5"/>`;
+    svg += `<circle class="fb-marker" cx="${midX + 10}" cy="${cy12}" r="3.5"/>`;
+  }
 
   // Fret numbers on the left
   for (let f = 1; f <= FRETS; f++) {
@@ -100,22 +106,23 @@ function renderFretboard() {
     svg += `<text class="fb-string-name" x="${x}" y="${topMargin + gridH + 20}" text-anchor="middle">${name}</text>`;
   });
 
-  // Open-string note labels and clickable open row
+  // Open/mute row — clickable, cycles open <-> muted
   for (let s = 0; s < STRINGS; s++) {
     const x = leftMargin + s * cellW;
     const cy = topMargin - 16;
-    const isSelected = selectedFrets[s] === 0;
-    const note = noteName(noteAtCurrent(s, 0), 0);
+    const val = selectedFrets[s];
+    const isOpen = val === 0;
+    const isMuted = val === null;
 
-    // Clickable area for "open"
-    svg += `<rect class="fb-hit" x="${x - cellW / 2 + 1}" y="${cy - 14}" width="${cellW - 2}" height="28" data-string="${s}" data-fret="0"/>`;
+    svg += `<rect class="fb-hit fb-hit-open" x="${x - cellW / 2 + 1}" y="${cy - 14}" width="${cellW - 2}" height="28" data-string="${s}"/>`;
 
-    if (isSelected) {
-      svg += `<circle class="fb-open-ring${isSelected ? ' fb-selected' : ''}" cx="${x}" cy="${cy}" r="10"/>`;
-      svg += `<text class="fb-open-note" x="${x}" y="${cy + 4}" text-anchor="middle">${note}</text>`;
+    if (isMuted) {
+      svg += `<circle class="fb-open-ring fb-muted" cx="${x}" cy="${cy}" r="10"/>`;
+      svg += `<text class="fb-open-note fb-mute-text" x="${x}" y="${cy + 4}" text-anchor="middle">&#215;</text>`;
     } else {
-      svg += `<circle class="fb-open-ring" cx="${x}" cy="${cy}" r="10"/>`;
-      svg += `<text class="fb-open-note fb-dim" x="${x}" y="${cy + 4}" text-anchor="middle">${note}</text>`;
+      const note = noteName(noteAtOpen(s), 0);
+      svg += `<circle class="fb-open-ring${isOpen ? ' fb-selected' : ''}" cx="${x}" cy="${cy}" r="10"/>`;
+      svg += `<text class="fb-open-note${isOpen ? '' : ' fb-dim'}" x="${x}" y="${cy + 4}" text-anchor="middle">${note}</text>`;
     }
   }
 
@@ -126,12 +133,11 @@ function renderFretboard() {
       const cy = topMargin + (f - 0.5) * cellH;
       const isSelected = selectedFrets[s] === f;
 
-      // Invisible hit area
       svg += `<rect class="fb-hit" x="${x - cellW / 2 + 1}" y="${cy - cellH / 2 + 1}" width="${cellW - 2}" height="${cellH - 2}" data-string="${s}" data-fret="${f}"/>`;
 
       if (isSelected) {
-        const note = noteName(noteAtCurrent(s, f), 0);
-        svg += `<circle class="fb-dot fb-selected" cx="${x}" cy="${cy}" r="${cellH * 0.34}"/>`;
+        const note = noteName(noteAtFret(s, f), 0);
+        svg += `<circle class="fb-dot fb-selected" cx="${x}" cy="${cy}" r="${cellH * 0.4}"/>`;
         svg += `<text class="fb-dot-text" x="${x}" y="${cy + 4}" text-anchor="middle">${note}</text>`;
       }
     }
@@ -141,13 +147,31 @@ function renderFretboard() {
 
   document.getElementById('fretboard-container').innerHTML = svg;
 
-  // Attach click handlers to all hit areas
-  document.querySelectorAll('.fb-hit').forEach(el => {
+  // Attach click handlers
+  document.querySelectorAll('.fb-hit-open').forEach(el => {
+    el.addEventListener('click', onOpenToggleClick);
+  });
+  document.querySelectorAll('.fb-hit:not(.fb-hit-open)').forEach(el => {
     el.addEventListener('click', onFretClick);
   });
 }
 
-// ── Click handler ───────────────────────────────────────────
+function noteAtOpen(s) {
+  return currentOpen()[s] % 12;
+}
+function noteAtFret(s, f) {
+  return (currentOpen()[s] + f) % 12;
+}
+
+// ── Click handlers ───────────────────────────────────────────
+
+function onOpenToggleClick(e) {
+  const s = parseInt(e.currentTarget.dataset.string, 10);
+  selectedFrets[s] = selectedFrets[s] === null ? 0 : null;
+  renderFretboard();
+  renderResult();
+  updateUrl();
+}
 
 function onFretClick(e) {
   const s = parseInt(e.currentTarget.dataset.string, 10);
@@ -162,7 +186,7 @@ function onFretClick(e) {
 }
 
 function clearFretboard() {
-  for (let i = 0; i < 4; i++) selectedFrets[i] = 0;
+  selectedFrets = new Array(stringCount()).fill(0);
   renderFretboard();
   renderResult();
   updateUrl();
@@ -172,13 +196,12 @@ function clearFretboard() {
 
 function renderResult() {
   const container = document.getElementById('identify-result');
-  const notes = selectedFrets.map((f, i) => noteAtCurrent(i, f));
-  const noteNamesArr = notes.map(n => noteName(n, 0));
   const strNames = currentStringNames();
 
   // Always show current notes
   const notesDisplay = selectedFrets.map((f, i) => {
-    const name = noteName(noteAtCurrent(i, f), 0);
+    if (f === null) return `<span class="id-note id-note-muted">${strNames[i]}: <small>(muted)</small></span>`;
+    const name = noteName(noteAtFret(i, f), 0);
     return `<span class="id-note">${strNames[i]}: ${name}${f > 0 ? ' <small>(fret ' + f + ')</small>' : ' <small>(open)</small>'}</span>`;
   }).join('');
 
@@ -223,16 +246,16 @@ function renderResult() {
     }
   }
 
-  // Add strumming pattern suggestions
+  // Add strumming/slide pattern suggestions
   const patterns = getStrummingPatterns();
   if (patterns.length > 0) {
     html += `<div class="id-strumming">`;
     html += `<div class="id-strumming-label">Strumming patterns:</div>`;
     html += `<div class="id-strumming-list">`;
     patterns.forEach(p => {
-      const patternDisplay = p.pattern.map(s => 
-        s === '-' ? '<span class="strum-rest">•</span>' : 
-        s === 'D' ? '<span class="strum-down">↓</span>' : 
+      const patternDisplay = p.pattern.map(s =>
+        s === '-' ? '<span class="strum-rest">•</span>' :
+        s === 'D' ? '<span class="strum-down">↓</span>' :
         '<span class="strum-up">↑</span>'
       ).join('');
       html += `<span class="id-strumming-chip">${p.name}: ${patternDisplay}</span>`;
@@ -252,7 +275,7 @@ document.addEventListener('DOMContentLoaded', () => {
   renderFretboard();
   renderResult();
   applyTheme(currentTheme());
-  
+
   // Update URL to match current state
   updateUrl();
 

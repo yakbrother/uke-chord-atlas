@@ -1,0 +1,306 @@
+/* ═══════════════════════════════════════════════════════════
+   IDENTIFIER PAGE — Fretboard & result display
+   ═══════════════════════════════════════════════════════════ */
+
+.identify-layout {
+  display: flex;
+  gap: 32px;
+  padding: 28px 40px 80px;
+  align-items: flex-start;
+  flex-wrap: wrap;
+}
+
+/* ── Fretboard SVG ─────────────────────────────────────────── */
+
+#fretboard-container {
+  flex-shrink: 0;
+}
+
+.fb-bg       { fill: var(--diagram-bg); }
+.fb-nut      { fill: var(--diagram-strong); }
+.fb-fret-line { stroke: var(--diagram-fret); stroke-width: 1; }
+.fb-string-line { stroke: var(--diagram-string); }
+.fb-marker   { fill: var(--diagram-fret); opacity: 0.5; }
+
+/* Decorative marks must not intercept clicks meant for the .fb-hit rects
+   drawn beneath them (SVG paint order stacks these on top). */
+.fb-open-ring, .fb-open-note, .fb-mute-text, .fb-dot, .fb-dot-text {
+  pointer-events: none;
+}
+
+.fb-fret-num {
+  fill: var(--text-muted);
+  font-size: 10px;
+  font-family: 'Jost', sans-serif;
+  font-weight: 500;
+}
+
+.fb-string-name {
+  fill: var(--text-muted);
+  font-size: 10px;
+  font-family: 'Jost', sans-serif;
+}
+
+/* Open-string ring */
+.fb-open-ring {
+  fill: none;
+  stroke: var(--diagram-open);
+  stroke-width: 1.8;
+}
+.fb-open-ring.fb-selected {
+  fill: var(--diagram-open);
+  stroke: var(--diagram-open);
+}
+.fb-open-note {
+  fill: var(--diagram-open);
+  font-size: 9px;
+  font-weight: bold;
+  font-family: monospace;
+  pointer-events: none;
+}
+.fb-open-ring.fb-selected + .fb-open-note {
+  fill: var(--diagram-dot-text);
+}
+.fb-open-note.fb-dim {
+  opacity: 0.4;
+}
+.fb-open-ring.fb-muted {
+  stroke: var(--diagram-muted-text);
+  opacity: 0.6;
+}
+.fb-mute-text {
+  fill: var(--diagram-muted-text);
+  font-size: 12px;
+  font-weight: bold;
+  pointer-events: none;
+}
+
+/* Finger dots */
+.fb-dot {
+  fill: var(--diagram-dot);
+  transition: r 0.08s;
+}
+.fb-dot-text {
+  fill: var(--diagram-dot-text);
+  font-size: 9px;
+  font-weight: bold;
+  font-family: monospace;
+  pointer-events: none;
+}
+
+/* Invisible click targets */
+.fb-hit {
+  fill: transparent;
+  cursor: pointer;
+}
+.fb-hit:hover {
+  fill: color-mix(in srgb, var(--accent) 12%, transparent);
+}
+
+/* ── Clear button ──────────────────────────────────────────── */
+
+.clear-btn {
+  font-family: 'Jost', sans-serif;
+  font-weight: 500;
+  font-size: 13px;
+  letter-spacing: 1px;
+  padding: 8px 18px;
+  min-height: 40px;
+  border: 1px dashed var(--border);
+  border-radius: 2px;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  margin-top: 10px;
+  transition: background 0.1s, color 0.1s;
+}
+.clear-btn:hover {
+  background: var(--surface-2);
+  color: var(--text);
+}
+
+/* ── Result panel ──────────────────────────────────────────── */
+
+#identify-result {
+  flex: 1;
+  min-width: 200px;
+}
+
+.id-notes-row {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+}
+
+.id-note {
+  font-family: 'Jost', sans-serif;
+  font-weight: 500;
+  font-size: 14px;
+  color: var(--text);
+  letter-spacing: 1px;
+  padding: 6px 10px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+}
+.id-note-muted {
+  opacity: 0.55;
+  font-style: italic;
+}
+.id-note small {
+  font-family: 'Jost', sans-serif;
+  font-weight: 300;
+  font-size: 10px;
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+.id-primary {
+  font-family: 'Jost', sans-serif;
+  font-weight: 600;
+  font-size: clamp(36px, 8vw, 64px);
+  color: var(--text);
+  letter-spacing: 3px;
+  line-height: 1.1;
+  margin-bottom: 4px;
+}
+
+.id-intervals {
+  font-family: monospace;
+  font-size: 15px;
+  color: var(--text-muted);
+  letter-spacing: 3px;
+  margin-bottom: 20px;
+}
+
+.id-hint {
+  font-style: italic;
+  color: var(--text-muted);
+  font-size: 14px;
+}
+
+.id-also {
+  font-family: 'Jost', sans-serif;
+  font-weight: 500;
+  font-size: 11px;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 8px;
+}
+
+.id-alt-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.id-alt-chip {
+  font-family: 'Jost', sans-serif;
+  font-weight: 500;
+  font-size: 14px;
+  color: var(--text);
+  padding: 5px 10px;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  letter-spacing: 0.5px;
+  background: var(--surface-3);
+}
+.id-alt-chip small {
+  font-family: monospace;
+  font-size: 10px;
+  color: var(--text-muted);
+  margin-left: 4px;
+}
+
+/* Chord progression suggestions */
+.id-progressions {
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+}
+
+.id-progression-label {
+  font-family: 'Jost', sans-serif;
+  font-weight: 500;
+  font-size: 11px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 8px;
+}
+
+.id-progression-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.id-progression-chip {
+  font-family: 'Jost', sans-serif;
+  font-weight: 500;
+  font-size: 12px;
+  color: var(--text);
+  padding: 4px 10px;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  letter-spacing: 0.5px;
+  background: var(--surface-3);
+}
+
+/* ── Responsive ────────────────────────────────────────────── */
+
+@media (max-width: 600px) {
+  .identify-layout {
+    padding: 20px 16px 80px;
+    flex-direction: column;
+    align-items: center;
+  }
+  #identify-result {
+    width: 100%;
+  }
+}
+
+/* Strumming patterns */
+.id-strumming {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+}
+
+.id-strumming-label {
+  font-family: 'Jost', sans-serif;
+  font-weight: 500;
+  font-size: 11px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 8px;
+}
+
+.id-strumming-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.id-strumming-chip {
+  font-family: 'Jost', sans-serif;
+  font-weight: 500;
+  font-size: 11px;
+  color: var(--text);
+  padding: 4px 10px;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  letter-spacing: 0.5px;
+  background: var(--surface-3);
+}
+
+.strum-down, .strum-up, .strum-rest {
+  font-size: 14px;
+  line-height: 1;
+}
+.strum-down { color: var(--accent); }
+.strum-up { color: var(--secondary); }
+.strum-rest { color: var(--text-muted); opacity: 0.6; }
