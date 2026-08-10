@@ -1,6 +1,6 @@
 // ═══════════════════════════════════════════════════════════
 // SVG CHORD DIAGRAM (shared)
-// Depends on: music-theory.js (STRING_NAMES_UKE)
+// Depends on: music-theory.js (currentStringNames)
 // ═══════════════════════════════════════════════════════════
 
 function chordSVG(frets, noteNamesArr, root, mixed) {

@@ -1,44 +1,61 @@
 // ═══════════════════════════════════════════════════════════
 // TUNING MODULE (shared)
-// Handles standard GCEA, low-G, and baritone DGBE tuning
-// Depends on: music-theory.js (currentTuning, setTuning, isBaritone, isLowG)
+// Renders the tuning toggle for every tuning in TUNINGS: standard GCEA and
+// low-G, D tuning ADF#B in high-A and low-A, and baritone DGBE in low-D and
+// high-D. Ordered low-to-high by instrument size.
+// Depends on: music-theory.js (TUNINGS, currentTuning, setTuning)
 // ═══════════════════════════════════════════════════════════
+
+const TUNING_ORDER = [
+  'standard', 'lowg',
+  'dTuning', 'dTuningLowA',
+  'baritone', 'baritoneHighD',
+];
+
+// Containers that have already had their delegated click listener attached.
+// Re-rendering replaces innerHTML only, so the listener is bound exactly once
+// per container no matter how many times the toggle is redrawn.
+const wiredToggles = new WeakSet();
+const toggleCallbacks = new WeakMap();
 
 /**
  * Render tuning toggle buttons into the specified container
  * @param {string} containerId - The ID of the container element
- * @param {function} onSwitchCallback - Optional callback when tuning is switched
+ * @param {function} [onSwitchCallback] - Optional callback when tuning is switched
  */
 function renderTuningToggle(containerId, onSwitchCallback) {
   const container = document.getElementById(containerId);
   if (!container) return;
 
-  const tuning = currentTuning || 'standard';
+  if (onSwitchCallback) toggleCallbacks.set(container, onSwitchCallback);
 
-  container.innerHTML = `
-    <button type="button" class="tuning-btn" aria-pressed="${tuning === 'standard'}" data-tuning="standard">Standard</button>
-    <button type="button" class="tuning-btn" aria-pressed="${tuning === 'lowg'}" data-tuning="lowg">Low-G</button>
-    <button type="button" class="tuning-btn" aria-pressed="${tuning === 'baritone'}" data-tuning="baritone">Baritone</button>
-  `;
+  container.innerHTML = TUNING_ORDER.map(id => {
+    const t = TUNINGS[id];
+    return `<button type="button" class="tuning-btn" aria-pressed="${currentTuning === id}"
+      data-tuning="${id}" title="${t.short}">${t.label}</button>`;
+  }).join('');
+
+  if (wiredToggles.has(container)) return;
+  wiredToggles.add(container);
 
   container.addEventListener('click', e => {
     const btn = e.target.closest('.tuning-btn');
-    if (btn && btn.dataset.tuning) {
-      switchTuning(btn.dataset.tuning);
-      if (onSwitchCallback) onSwitchCallback();
-    }
+    if (!btn || !btn.dataset.tuning) return;
+
+    switchTuning(btn.dataset.tuning);
+
+    const cb = toggleCallbacks.get(container);
+    if (cb) cb();
   });
 }
 
 /**
- * Switch to a different tuning
- * @param {string} tuning - 'standard', 'lowg', or 'baritone'
+ * Switch to a different tuning and redraw every toggle on the page
+ * @param {string} tuning - a key of TUNINGS
  */
 function switchTuning(tuning) {
   setTuning(tuning);
-  // Re-render all tuning toggles on the page
-  const toggleContainers = document.querySelectorAll('[id^="tuning-toggle"]');
-  toggleContainers.forEach(container => {
+  document.querySelectorAll('[id^="tuning-toggle"]').forEach(container => {
     renderTuningToggle(container.id);
   });
 }
@@ -49,10 +66,11 @@ function switchTuning(tuning) {
  */
 function initTuning() {
   try {
-    currentTuning = localStorage.getItem('uca-tuning') || 'standard';
+    // setTuning falls back to the default for unknown ids, so a stale or
+    // hand-edited storage value can't leave the app in a broken tuning.
+    setTuning(localStorage.getItem('uca-tuning') || DEFAULT_TUNING);
   } catch (e) {
-    // localStorage may be unavailable, use default
-    currentTuning = 'standard';
+    currentTuning = DEFAULT_TUNING;
   }
 }
 

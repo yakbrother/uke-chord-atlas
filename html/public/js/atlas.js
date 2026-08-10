@@ -18,9 +18,14 @@ const KEYS = [
   { root: 11, label: "B" },
 ];
 
+// Picking a key with no type filter returns every voicing of all 16 chord
+// types at once — a few hundred diagrams, which is unreadable as a starting
+// point. Opening on plain majors keeps it to a handful; "All" is one click away.
+const DEFAULT_TYPE = "maj";
+
 const state = {
   root: null,
-  type: "all",
+  type: DEFAULT_TYPE,
   mixedOnly: false,
   searchQuery: "",
 };
@@ -62,7 +67,8 @@ function updateUrl() {
     params.set('key', state.root);
   }
   
-  if (state.type !== 'all') {
+  // Anything that isn't the default has to survive a reload, including "all".
+  if (state.type !== DEFAULT_TYPE) {
     params.set('type', state.type);
   }
   
@@ -155,10 +161,10 @@ function renderContent() {
   }
 
   const displayRoot = state.root;
-  // Baritone: same shapes are 5 semitones lower, so look up (root + 5) in the
-  // standard-tuning voicing cache to get fingerings that sound as displayRoot.
-  const lookupRoot = isBaritone() ? (displayRoot + BARI_OFFSET) % 12 : displayRoot;
-  let voicings = getVoicings(lookupRoot);
+  // Every tuning is standard GCEA shifted by a fixed interval, so look up the
+  // transposed root in the standard voicing cache to get fingerings that sound
+  // as displayRoot in whatever is currently selected.
+  let voicings = getVoicings(standardRootFor(displayRoot));
 
   if (state.type !== "all") {
     voicings = voicings.filter(v => v.type === state.type);
@@ -203,11 +209,9 @@ function renderContent() {
     html += `<div class="voicings-grid">`;
     vs.forEach((v) => {
       const mixed = isMixed(v.frets);
-      // Transpose note names for baritone (standard notes minus offset)
-      const noteNamesArr = v.notes.map(n => {
-        const display = isBaritone() ? ((n - BARI_OFFSET + 12) % 12) : n;
-        return noteName(display, displayRoot);
-      });
+      // The voicing was generated in standard GCEA, so its notes have to be
+      // transposed back into the current tuning before they are labelled.
+      const noteNamesArr = v.notes.map(n => noteName(soundingNote(n), displayRoot));
       const svg = chordSVG(v.frets, noteNamesArr, displayRoot, mixed);
       const fretData = JSON.stringify(v.frets);
       const noteData = JSON.stringify(noteNamesArr);

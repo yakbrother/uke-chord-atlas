@@ -228,6 +228,7 @@ h1 {
 .tuning-toggle {
   display: flex;
   gap: 0;
+  flex-wrap: wrap;
 }
 
 .app-switch-link {
@@ -251,17 +252,18 @@ h1 {
   font-family: 'Jost', sans-serif;
   font-weight: 500;
   font-size: 12px;
-  letter-spacing: 2px;
+  letter-spacing: 1.5px;
   text-transform: uppercase;
-  padding: 6px 14px;
+  padding: 6px 12px;
   border: 1px solid var(--border);
-  border-right: none;
+  /* Every button keeps a full border and overlaps its neighbour, so the
+     segmented look survives wrapping onto a second row on narrow screens. */
+  margin-right: -1px;
   background: transparent;
   color: var(--text-muted);
   cursor: pointer;
   transition: background 0.1s, color 0.1s;
 }
-.tuning-btn:last-child { border-right: 1px solid var(--border); }
 .tuning-btn:hover { background: var(--surface-2); }
 .tuning-btn[aria-pressed="true"] {
   background: var(--accent);

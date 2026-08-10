@@ -17,37 +17,105 @@ function rootNoteName(root) {
   return FLAT_KEYS.has(root) ? NOTE_NAMES_FLAT[root] : NOTE_NAMES[root];
 }
 
-// GCEA open-string pitches (semitones, C = 0)
-const OPEN = [7, 0, 4, 9]; // G C E A (high-G)
-const OPEN_LOWG = [-5, 0, 4, 9]; // g C E A (low-G, octave lower)
-const STRING_NAMES_UKE = ["G", "C", "E", "A"];
-const STRING_NAMES_LOWG = ["g", "C", "E", "A"];
+// ── Tunings ─────────────────────────────────────────────────
+//
+// `open` holds pitch classes (semitones, C = 0) and drives chord spelling.
+// `midi` holds the actual sounding pitch of each open string, which is what
+// distinguishes a re-entrant tuning from a linear one: the pitch classes are
+// identical, but the lowest-sounding string is not. Only `midi` can tell you
+// which note is in the bass, so slash-chord detection reads from there.
+//
+// `reentrant` means at least one string breaks the low-to-high ordering.
+//
+// `offset` is how many semitones the tuning sounds BELOW standard GCEA.
+// Every tuning here is standard GCEA moved bodily up or down — the intervals
+// between the strings never change — which is what lets all of them share one
+// set of generated voicings. See standardRootFor() below.
+const TUNINGS = {
+  standard: {
+    id: 'standard', label: 'Standard', short: 'GCEA',
+    open: [7, 0, 4, 9],   midi: [55, 48, 52, 57], // G4 C4 E4 A4
+    stringNames: ["G", "C", "E", "A"],
+    offset: 0, baritone: false, reentrant: true,
+  },
+  lowg: {
+    id: 'lowg', label: 'Low-G', short: 'gCEA',
+    open: [7, 0, 4, 9],   midi: [43, 48, 52, 57], // G3 C4 E4 A4
+    stringNames: ["g", "C", "E", "A"],
+    offset: 0, baritone: false, reentrant: false,
+  },
+  // "D tuning" (also called English tuning) — a whole step above standard.
+  // It was the common tuning before C tuning took over, and still turns up in
+  // older method books and on vintage sopranos.
+  dTuning: {
+    id: 'dTuning', label: 'D (high-A)', short: 'ADF#B',
+    open: [9, 2, 6, 11],  midi: [59, 52, 56, 61], // A4 D4 F#4 B4 — re-entrant
+    stringNames: ["A", "D", "F#", "B"],
+    offset: -2, baritone: false, reentrant: true,
+  },
+  dTuningLowA: {
+    id: 'dTuningLowA', label: 'D (low-A)', short: 'aDF#B',
+    open: [9, 2, 6, 11],  midi: [47, 52, 56, 61], // A3 D4 F#4 B4 — linear
+    stringNames: ["a", "D", "F#", "B"],
+    offset: -2, baritone: false, reentrant: false,
+  },
+  baritone: {
+    id: 'baritone', label: 'Bari low-D', short: 'DGBE',
+    open: [2, 7, 11, 4],  midi: [38, 43, 47, 52], // D3 G3 B3 E4 — linear
+    stringNames: ["D", "G", "B", "E"],
+    offset: 5, baritone: true, reentrant: false,
+  },
+  baritoneHighD: {
+    id: 'baritoneHighD', label: 'Bari high-D', short: 'DGBE re-entrant',
+    open: [2, 7, 11, 4],  midi: [50, 43, 47, 52], // D4 G3 B3 E4 — re-entrant
+    stringNames: ["D", "G", "B", "E"],
+    offset: 5, baritone: true, reentrant: true,
+  },
+};
 
-// DGBE baritone — same intervals, a perfect 4th (5 semitones) lower
-const OPEN_BARI = [2, 7, 11, 4]; // D G B E
-const STRING_NAMES_BARI = ["D", "G", "B", "E"];
-const BARI_OFFSET = 5;
+const DEFAULT_TUNING = 'standard';
 
-let currentTuning = 'standard';
+// Voicing generation always works in standard GCEA and transposes to whatever
+// is selected, so it needs the standard shape regardless of the current tuning.
+const OPEN = TUNINGS.standard.open;
+
+let currentTuning = DEFAULT_TUNING;
+
+function tuning() { return TUNINGS[currentTuning] || TUNINGS[DEFAULT_TUNING]; }
 
 function setTuning(t) {
-  currentTuning = t;
-  try { localStorage.setItem('uca-tuning', t); } catch (e) {}
+  currentTuning = TUNINGS[t] ? t : DEFAULT_TUNING;
+  try { localStorage.setItem('uca-tuning', currentTuning); } catch (e) {}
 }
 
 function isLowG() { return currentTuning === 'lowg'; }
-function isBaritone() { return currentTuning === 'baritone'; }
+function isBaritone() { return tuning().baritone; }
 
-function currentOpen() {
-  if (isBaritone()) return OPEN_BARI;
-  if (isLowG()) return OPEN_LOWG;
-  return OPEN;
+function currentOpen() { return tuning().open; }
+function currentMidi() { return tuning().midi; }
+function currentStringNames() { return tuning().stringNames; }
+
+function mod12(n) { return ((n % 12) + 12) % 12; }
+
+/**
+ * Which standard-GCEA root to look up in order to hear `displayRoot` in the
+ * current tuning. A shape voicing F in GCEA sounds C on a baritone, so asking
+ * for C looks up F.
+ * @param {number} displayRoot - the key the player picked (0-11)
+ * @returns {number} the root to search the standard voicing cache for
+ */
+function standardRootFor(displayRoot) {
+  return mod12(displayRoot + tuning().offset);
 }
 
-function currentStringNames() {
-  if (isBaritone()) return STRING_NAMES_BARI;
-  if (isLowG()) return STRING_NAMES_LOWG;
-  return STRING_NAMES_UKE;
+/**
+ * The inverse: what a note from a standard-tuning voicing actually sounds as
+ * in the current tuning, for labelling diagrams.
+ * @param {number} standardNote - a pitch class from a generated voicing
+ * @returns {number} the pitch class that sounds
+ */
+function soundingNote(standardNote) {
+  return mod12(standardNote - tuning().offset);
 }
 
 // Standard tuning noteAt — used by voicing generator (always GCEA)
@@ -179,10 +247,10 @@ function identifyChord(frets) {
   const uniqueNotes = [...new Set(notes)];
   const results = [];
 
-  // Bass note: use approximate MIDI pitches for the current tuning.
-  // Standard GCEA: G4=55, C4=48, E4=52, A4=57
-  // Baritone DGBE: D3=50, G3=43, B3=47, E4=52
-  const pitches = isBaritone() ? [50, 43, 47, 52] : [55, 48, 52, 57];
+  // Bass note: the lowest *sounding* string, which depends on the octave each
+  // open string is tuned to, not just its pitch class. In re-entrant tunings
+  // (standard high-G, baritone high-D) the lowest string is not string 0.
+  const pitches = currentMidi();
   let bassIdx = 0;
   let bassPitch = Infinity;
   for (let i = 0; i < 4; i++) {
