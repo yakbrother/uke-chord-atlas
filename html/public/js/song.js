@@ -72,7 +72,10 @@ function setStatus(msg, isError) {
   el.classList.toggle('error', !!isError);
 }
 
+let progressHideTimer = null;
+
 function setProgress(frac) {
+  clearTimeout(progressHideTimer); // a newer operation owns the bar now
   const wrap = $('progress');
   if (frac == null) { wrap.hidden = true; return; }
   wrap.hidden = false;
@@ -390,6 +393,8 @@ function releaseAudio() {
 async function loadAudioFile(file) {
   if (!file) return;
   const token = ++loadToken;
+  const startArtist = $('meta-artist').value, startTitle = $('meta-title').value;
+  const startLyricsToken = lyricsToken;
   if (file.size > MAX_FILE_BYTES) {
     setStatus(`That file is ${Math.round(file.size / 1048576)} MB; Song Lab handles files up to ${MAX_FILE_BYTES / 1048576} MB.`, true);
     return;
@@ -432,7 +437,10 @@ async function loadAudioFile(file) {
   }
   if (token !== loadToken) return; // a newer file or chart was loaded meanwhile
 
-  // Decode succeeded: now replace the previous song's audio, metadata and lyrics.
+  // Decode succeeded: now replace the previous song's audio, metadata and lyrics,
+  // keeping anything the user typed or pasted while the file was decoding.
+  const edited = $('meta-artist').value !== startArtist || $('meta-title').value !== startTitle;
+  const pastedMeanwhile = lyricsToken !== startLyricsToken;
   const audio = $('audio');
   audio.pause();
   if (song.audioUrl) URL.revokeObjectURL(song.audioUrl);
@@ -441,10 +449,12 @@ async function loadAudioFile(file) {
   song.file = file;
   song.pcm = pcm;
   song.duration = 0;
-  resetLyrics();
-  const meta = guessMetaFromFilename(file.name);
-  $('meta-artist').value = meta.artist;
-  $('meta-title').value = meta.title;
+  if (!pastedMeanwhile) resetLyrics();
+  if (!edited) {
+    const meta = guessMetaFromFilename(file.name);
+    $('meta-artist').value = meta.artist;
+    $('meta-title').value = meta.title;
+  }
   await analyze(token);
 }
 
@@ -457,10 +467,22 @@ async function analyze(token) {
   await nextFrame();
   if (token !== loadToken || song.pcm !== pcm) return;
   const t0 = performance.now();
-  const res = detectChords(pcm.channels, pcm.sampleRate, {
-    include7ths: $('opt-sevenths').checked,
-    selfProb: SMOOTHING_LEVELS[parseInt($('opt-smoothing').value, 10)] || 0.92,
-  });
+  let res;
+  try {
+    res = detectChords(pcm.channels, pcm.sampleRate, {
+      include7ths: $('opt-sevenths').checked,
+      selfProb: SMOOTHING_LEVELS[parseInt($('opt-smoothing').value, 10)] || 0.92,
+    });
+  } catch (err) {
+    console.error(err);
+    // Don't leave the previous song's chords paired with this recording
+    releaseAudio();
+    song.source = null;
+    setProgress(null);
+    setStatus('Chord analysis failed for this recording (it may be too large for this device).', true);
+    renderAll();
+    return;
+  }
   song.source = 'audio';
   song.duration = res.duration;
   song.tuningCents = res.tuningCents;
@@ -479,7 +501,7 @@ async function analyze(token) {
   const n = song.segments.filter(s => s.chord).length;
   const keyNote = song.origKey ? ` Likely key: ${keyLabel(song.origKey, 0)}.` : '';
   setStatus(`Found ${n} chord changes in ${formatTime(res.duration)} (analysis took ${((performance.now() - t0) / 1000).toFixed(1)} s).${keyNote}`);
-  setTimeout(() => setProgress(null), 600);
+  progressHideTimer = setTimeout(() => { $('progress').hidden = true; }, 600);
   $('reanalyze-btn').hidden = false;
   renderAll();
 }
@@ -495,6 +517,7 @@ function loadSheet() {
   }
   loadToken++; // cancel any audio decode/analysis still running
   releaseAudio();
+  setProgress(null);
   resetLyrics();
   song.source = 'sheet';
   song.sheetRows = parsed.rows.map(r => ({ text: r.text, chords: r.chords.map(c => ({ pos: c.pos, name: c.name, chord: parseChordName(c.name) })) }));
@@ -544,7 +567,10 @@ function lyricsScore(rec) {
 
 // Sends only the artist, title and (for audio) duration typed in the fields
 // above, and only when the user presses "Find synced lyrics".
+const CHART_HAS_LYRICS = 'A pasted chart carries its own lyrics; edit them in the chart instead.';
+
 async function fetchLyrics() {
+  if (song.source === 'sheet') { setStatus(CHART_HAS_LYRICS, true); return; }
   const artist = $('meta-artist').value.trim();
   const title = $('meta-title').value.trim();
   if (!title) { setStatus('Enter a song title (and ideally the artist) to look up lyrics.', true); return; }
@@ -590,6 +616,7 @@ async function fetchLyrics() {
 }
 
 function applyPastedLyrics() {
+  if (song.source === 'sheet') { setStatus(CHART_HAS_LYRICS, true); return; }
   const parsed = parseLrc($('lyrics-input').value);
   if (!parsed.length) { setStatus('No lyrics to use.', true); return; } // keep what's loaded
   lyricsToken++; // a lookup still in flight must not replace the pasted lyrics
