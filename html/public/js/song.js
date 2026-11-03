@@ -30,8 +30,31 @@ const song = {
 
 const $ = (id) => document.getElementById(id);
 
-function esc(s) {
-  return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+/**
+ * Build a DOM element. Text always goes in via textContent and attributes via
+ * setAttribute, so song data (lyrics, chord names) is never parsed as HTML.
+ */
+function el(tag, attrs, ...children) {
+  const node = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs || {})) {
+    if (v === null || v === undefined || v === false) continue;
+    if (k === 'class') node.className = v;
+    else if (k === 'text') node.textContent = v;
+    else node.setAttribute(k, v === true ? '' : String(v));
+  }
+  for (const c of children.flat()) {
+    if (c === null || c === undefined || c === false) continue;
+    node.append(c instanceof Node ? c : document.createTextNode(String(c)));
+  }
+  return node;
+}
+
+const svgParser = new DOMParser();
+
+/** Parse the trusted SVG markup from chordSVG() (numbers + fixed note names) into a node. */
+function svgNode(markup) {
+  const doc = svgParser.parseFromString(markup, 'image/svg+xml');
+  return document.importNode(doc.documentElement, true);
 }
 
 let infoTimer = null;
@@ -97,16 +120,19 @@ function voicingsFor(chord) {
   return easiestVoicings(t.root, t.typeId, 6);
 }
 
-function diagramHtml(chord) {
-  if (!chord) return '<div class="no-diagram">–</div>';
+function diagramNode(chord) {
+  if (!chord) return el('div', { class: 'no-diagram', text: '–' });
   const label = labelFor(chord);
   const vs = voicingsFor(chord);
-  if (!vs.length) return `<div class="no-diagram" title="No diagram for this chord type">${esc(label)}<br><small>no diagram</small></div>`;
+  if (!vs.length) {
+    return el('div', { class: 'no-diagram', title: 'No diagram for this chord type' },
+      label, el('br'), el('small', { text: 'no diagram' }));
+  }
   const idx = (song.voicingPick[label] || 0) % vs.length;
   const v = vs[idx];
   const root = transposeChord(chord, song.transpose).root;
   const names = v.notes.map(n => noteName(n, flats() ? 5 : 0));
-  return chordSVG(v.frets, names, root, isMixed(v.frets));
+  return svgNode(chordSVG(v.frets, names, root, isMixed(v.frets)));
 }
 
 // ── Rendering ───────────────────────────────────────────────
@@ -154,30 +180,37 @@ function renderPalette() {
     const l = labelFor(c);
     if (l && !seen.has(l)) seen.set(l, c);
   }
-  const pal = $('palette');
-  pal.innerHTML = [...seen.entries()].map(([label, c]) => {
+  $('palette').replaceChildren(...[...seen.entries()].map(([label, c]) => {
     const n = voicingsFor(c).length;
-    return `<button type="button" class="chord-card palette-card" data-label="${esc(label)}" aria-label="${esc(label)}${n > 1 ? ', tap for another voicing' : ''}">
-      <span class="pc-name">${esc(label)}</span>${diagramHtml(c)}
-      ${n > 1 ? `<span class="pc-count">${(song.voicingPick[label] || 0) % n + 1}/${n}</span>` : ''}
-    </button>`;
-  }).join('');
+    return el('button', {
+      type: 'button', class: 'chord-card palette-card', 'data-label': label,
+      'aria-label': label + (n > 1 ? ', tap for another voicing' : ''),
+    },
+    el('span', { class: 'pc-name', text: label }),
+    diagramNode(c),
+    n > 1 ? el('span', { class: 'pc-count', text: `${(song.voicingPick[label] || 0) % n + 1}/${n}` }) : null);
+  }));
 }
 
 function renderTimeline() {
   const tl = $('timeline');
-  if (song.source !== 'audio') { tl.hidden = true; tl.innerHTML = ''; return; }
+  if (song.source !== 'audio') { tl.hidden = true; tl.replaceChildren(); return; }
   tl.hidden = false;
   tl.classList.toggle('editing', song.editing);
-  tl.innerHTML = song.segments.map((s, i) => {
+  tl.replaceChildren(...song.segments.map((s, i) => {
     const label = labelFor(s.chord) || 'N.C.';
+    const time = el('span', { class: 'seg-time', text: formatTime(s.start) });
     if (song.editing) {
-      return `<span class="seg seg-edit" data-i="${i}"><span class="seg-time">${formatTime(s.start)}</span>
-        <input type="text" class="seg-input" data-i="${i}" value="${esc(s.chord ? label : '')}" placeholder="N.C." aria-label="Chord at ${formatTime(s.start)}" size="5"></span>`;
+      const input = el('input', {
+        type: 'text', class: 'seg-input', 'data-i': i, placeholder: 'N.C.',
+        'aria-label': `Chord at ${formatTime(s.start)}`, size: 5,
+      });
+      input.value = s.chord ? label : '';
+      return el('span', { class: 'seg seg-edit', 'data-i': i }, time, input);
     }
-    return `<button type="button" class="seg${s.chord ? '' : ' nc'}" data-i="${i}" data-start="${s.start}">
-      <span class="seg-time">${formatTime(s.start)}</span><span class="seg-name">${esc(label)}</span></button>`;
-  }).join('');
+    return el('button', { type: 'button', class: 'seg' + (s.chord ? '' : ' nc'), 'data-i': i, 'data-start': s.start },
+      time, el('span', { class: 'seg-name', text: label }));
+  }));
 }
 
 function currentRows() {
@@ -196,34 +229,49 @@ function currentRows() {
   return null;
 }
 
+function lyricRow(text) {
+  return el('div', { class: 'row' }, el('div', { class: 'row-text', text: text || '\u00a0' }));
+}
+
 function renderSheet() {
   const sheet = $('sheet');
   const rows = currentRows();
   if (rows) {
-    sheet.innerHTML = rows.map((r, i) => {
+    sheet.replaceChildren(...rows.map((r, i) => {
       const chordLine = chordLineFor(r);
-      const timeAttr = r.time != null ? ` data-time="${r.time}" tabindex="0" role="button" aria-label="Jump to ${formatTime(r.time)}"` : '';
-      if (!r.text && !chordLine) return `<div class="row blank" data-row="${i}"></div>`;
-      return `<div class="row" data-row="${i}"${timeAttr}>${chordLine ? `<div class="row-chords">${esc(chordLine)}</div>` : ''}<div class="row-text">${esc(r.text) || '&nbsp;'}</div></div>`;
-    }).join('');
+      if (!r.text && !chordLine) return el('div', { class: 'row blank', 'data-row': i });
+      const timed = r.time != null;
+      return el('div', {
+        class: 'row', 'data-row': i,
+        'data-time': timed ? r.time : null, tabindex: timed ? 0 : null,
+        role: timed ? 'button' : null, 'aria-label': timed ? `Jump to ${formatTime(r.time)}` : null,
+      },
+      chordLine ? el('div', { class: 'row-chords', text: chordLine }) : null,
+      el('div', { class: 'row-text', text: r.text || '\u00a0' }));
+    }));
     return;
   }
   if (song.lyrics.length) {
-    sheet.innerHTML = progressionHtml() + `<p class="hint">These lyrics have no timestamps, so chords can't be placed on them. Follow the timeline above.</p>` +
-      song.lyrics.map(l => `<div class="row"><div class="row-text">${esc(l.text) || '&nbsp;'}</div></div>`).join('');
+    sheet.replaceChildren(
+      progressionNode(),
+      el('p', { class: 'hint', text: "These lyrics have no timestamps, so chords can't be placed on them. Follow the timeline above." }),
+      ...song.lyrics.map(l => lyricRow(l.text)));
     return;
   }
-  sheet.innerHTML = song.source === 'audio'
-    ? progressionHtml() + '<p class="hint">Add lyrics (Find synced lyrics, or paste them) to see chords above the words.</p>'
-    : '';
+  if (song.source === 'audio') {
+    sheet.replaceChildren(progressionNode(),
+      el('p', { class: 'hint', text: 'Add lyrics (Find synced lyrics, or paste them) to see chords above the words.' }));
+  } else {
+    sheet.replaceChildren();
+  }
 }
 
 /** Printable progression for audio songs without synced lyrics (the timeline is screen-only). */
-function progressionHtml() {
+function progressionNode() {
   const labels = song.segments.map(s => labelFor(s.chord)).filter(Boolean);
   const lines = [];
   for (let i = 0; i < labels.length; i += 8) lines.push(labels.slice(i, i + 8).join('  '));
-  return `<div class="print-progression">${lines.map(l => `<div class="row-chords">${esc(l)}</div>`).join('')}</div>`;
+  return el('div', { class: 'print-progression' }, lines.map(l => el('div', { class: 'row-chords', text: l })));
 }
 
 // ── Playback sync ───────────────────────────────────────────
@@ -251,9 +299,9 @@ function updatePlayhead(force) {
     while (nextIdx < song.segments.length && !song.segments[nextIdx].chord) nextIdx++;
     const nxt = song.segments[nextIdx];
     $('now-name').textContent = cur && cur.chord ? labelFor(cur.chord) : 'N.C.';
-    $('now-diagram').innerHTML = diagramHtml(cur && cur.chord);
+    $('now-diagram').replaceChildren(diagramNode(cur && cur.chord));
     $('next-name').textContent = nxt ? labelFor(nxt.chord) : '–';
-    $('next-diagram').innerHTML = diagramHtml(nxt && nxt.chord);
+    $('next-diagram').replaceChildren(diagramNode(nxt && nxt.chord));
     document.querySelectorAll('#timeline .seg.active').forEach(el => el.classList.remove('active'));
     const segEl = document.querySelector(`#timeline .seg[data-i="${si}"]`);
     if (segEl) {
