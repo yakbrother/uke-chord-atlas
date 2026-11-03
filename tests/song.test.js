@@ -290,3 +290,35 @@ test('long sheets paginate and long lines wrap without splitting chord names', (
   const names = parts.map(p => p.chordLine).join(' ').split(/\s+/).filter(Boolean);
   assert.deepEqual(names, ['C', 'Gmaj7', 'Am']);
 });
+
+// ── Identifier: bass note and progressions ─────────────────
+
+test('baritone D shape (0-2-3-2) is D, not D/A: the D string is the lowest', () => {
+  const ctx = loadUkeEngine();
+  ctx.setTuning('baritone');
+  const [best] = toPlain(ctx.identifyChord([0, 2, 3, 2]));
+  assert.equal(best.label, 'D');
+  assert.equal(best.isSlash, false);
+});
+
+test('bass note follows each tuning: re-entrant standard vs low-G', () => {
+  const ctx = loadUkeEngine();
+  // Open strings G C E A = C6 / Am7; in standard tuning C is the lowest note
+  ctx.setTuning('standard');
+  const std = toPlain(ctx.identifyChord([0, 0, 0, 3]));  // G C E C = C major
+  assert.equal(std[0].label, 'C');
+  // With a low G the G string is now the bass: C/G
+  ctx.setTuning('lowg');
+  const low = toPlain(ctx.identifyChord([0, 0, 0, 3]));
+  assert.equal(low[0].label, 'C/G');
+});
+
+test('progression suggestions follow the scale (I-IV-V in D is D-G-A)', () => {
+  const ctx = loadUkeEngine();
+  const byName = Object.fromEntries(toPlain(ctx.getProgressionSuggestions(2, 'maj')).map(p => [p.name, p.chords]));
+  assert.deepEqual(byName['I-IV-V'], ['D', 'G', 'A']);
+  assert.deepEqual(byName['I-V-vi-IV'], ['D', 'A', 'Bmin', 'G']);
+  assert.deepEqual(byName['ii-V-I'], ['Emin', 'A', 'D']);
+  const minor = Object.fromEntries(toPlain(ctx.getProgressionSuggestions(9, 'min')).map(p => [p.name, p.chords]));
+  assert.deepEqual(minor['I-IV-V'], ['Amin', 'Dmin', 'Emin']);
+});
