@@ -16,7 +16,7 @@ function loadUkeEngine() {
     },
   };
   vm.createContext(sandbox);
-  for (const file of ['music-theory.js', 'chord-detect.js', 'song-utils.js']) {
+  for (const file of ['music-theory.js', 'chord-detect.js', 'song-utils.js', 'pdf-export.js']) {
     const code = fs.readFileSync(path.join(JS_DIR, file), 'utf8');
     vm.runInContext(code, sandbox, { filename: file });
   }

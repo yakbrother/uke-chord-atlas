@@ -29,7 +29,7 @@ Play along with real songs on any tuning, built around the **baritone (DGBE)** u
 - **Synced lyrics** from [LRCLIB](https://lrclib.net) by artist and title (guessed from the file name), or paste LRC or plain lyrics. Chords are placed above the words at the time they change. Click a line to jump there.
 - **Fix chords**: correct any wrong detection inline.
 - **Paste a chord chart** (ChordPro `[C]` brackets or chords above lyrics) to transpose it and see diagrams without any audio.
-- **Download ChordPro** or print the sheet.
+- **Download PDF** (title, key/capo/tuning, the chord diagrams you've picked and the chords-over-lyrics sheet, paginated), **download ChordPro**, or print the sheet.
 
 Detection handles major and minor triads by default (7ths are optional). It works best on recordings where the harmony is clear, and it's meant as a starting point, not a perfect transcription.
 
@@ -76,6 +76,7 @@ html/public/
     identify.js         Fretboard interaction and result rendering
     chord-detect.js     Audio → chords (FFT, chroma, templates, Viterbi, key)
     song-utils.js       Chord parsing/transposition, LRC, ChordPro, voicing choice
+    pdf-export.js       Hand-written PDF generator for chord sheets (no libraries)
     song.js             Song Lab page logic
 ```
 

@@ -670,31 +670,98 @@ function commitSegEdit(input) {
 
 // ── Export ──────────────────────────────────────────────────
 
+function exportCapo() {
+  return song.source === 'audio'
+    ? (song.transpose < 0 ? -song.transpose : null)
+    : (song.capo || null);
+}
+
+function tuningLabel() {
+  return isBaritone() ? 'baritone DGBE' : (isLowG() ? 'low-G gCEA' : 'standard GCEA');
+}
+
+function exportFileBase() {
+  return ($('meta-title').value.trim() || 'song').replace(/[^\w\- ]+/g, '').trim().replace(/\s+/g, '-') || 'song';
+}
+
+function downloadBlob(blob, filename) {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+}
+
 function exportChordPro() {
   const rows = currentRows();
   const k = playKey();
-  const capo = song.source === 'audio'
-    ? (song.transpose < 0 ? -song.transpose : null)
-    : (song.capo || null);
-  const tuningName = isBaritone() ? 'baritone DGBE' : (isLowG() ? 'low-G gCEA' : 'standard GCEA');
   const meta = {
     title: $('meta-title').value.trim(),
     artist: $('meta-artist').value.trim(),
     key: k ? (flats() ? NOTE_NAMES_FLAT : NOTE_NAMES)[k.root] + (k.mode === 'minor' ? 'm' : '') : '',
-    capo,
-    tuning: tuningName,
+    capo: exportCapo(),
+    tuning: tuningLabel(),
   };
   const segs = song.segments.map(s => ({ start: s.start, end: s.end, label: labelFor(s.chord) }));
   // Untimed lyrics can't carry chords, but they still belong in the file
   const plain = !rows && song.lyrics.length ? song.lyrics.map(l => l.text) : null;
-  const text = toChordPro(meta, rows, segs, plain);
-  const blob = new Blob([text], { type: 'text/plain' });
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = (meta.title || 'song').replace(/[^\w\- ]+/g, '').trim().replace(/\s+/g, '-') + '.cho';
-  document.body.appendChild(a);
-  a.click();
-  setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+  downloadBlob(new Blob([toChordPro(meta, rows, segs, plain)], { type: 'text/plain' }), exportFileBase() + '.cho');
+}
+
+/** Diagrams exactly as shown in the palette (current voicing choice per chord). */
+function exportDiagrams() {
+  const seen = new Map();
+  for (const c of allChords()) {
+    const l = labelFor(c);
+    if (l && !seen.has(l)) seen.set(l, c);
+  }
+  const out = [];
+  for (const [label, c] of seen) {
+    const vs = voicingsFor(c);
+    if (!vs.length) continue; // no diagram for this chord type
+    const v = vs[(song.voicingPick[label] || 0) % vs.length];
+    out.push({
+      name: label,
+      frets: v.frets,
+      notes: v.notes.map(n => noteName(n, flats() ? 5 : 0)),
+      stringNames: currentStringNames(),
+    });
+  }
+  return out;
+}
+
+function exportPdf() {
+  const rows = currentRows();
+  let sheet;
+  if (rows) {
+    sheet = rows.map(r => ({ chordLine: chordLineFor(r), text: r.text }));
+  } else {
+    // No synced lyrics: the progression, then any plain lyrics
+    const labels = song.segments.map(s => labelFor(s.chord)).filter(Boolean);
+    sheet = [];
+    for (let i = 0; i < labels.length; i += 8) sheet.push({ chordLine: labels.slice(i, i + 8).join('  '), text: '' });
+    if (song.lyrics.length) {
+      sheet.push({ chordLine: '', text: '' });
+      sheet.push(...song.lyrics.map(l => ({ chordLine: '', text: l.text })));
+    }
+  }
+  const k = playKey();
+  const capo = exportCapo();
+  const details = [];
+  if (k) details.push(`Key: ${keyLabel(song.origKey, song.transpose)}`);
+  if (capo) details.push(`Capo ${capo}`);
+  details.push(`Tuning: ${tuningLabel()}`);
+  if (song.transpose) details.push(`Transposed ${song.transpose > 0 ? '+' : ''}${song.transpose} from ${keyLabel(song.origKey, 0)}`);
+  const bytes = buildChordSheetPdf({
+    title: $('meta-title').value.trim() || 'Untitled song',
+    artist: $('meta-artist').value.trim(),
+    details,
+    diagrams: exportDiagrams(),
+    rows: sheet,
+    footer: 'Song Lab \u00B7 Uke Chord Atlas',
+  });
+  downloadBlob(new Blob([bytes], { type: 'application/pdf' }), exportFileBase() + '.pdf');
 }
 
 // ── Wiring ──────────────────────────────────────────────────
@@ -814,5 +881,6 @@ document.addEventListener('DOMContentLoaded', () => {
   audio.addEventListener('loadedmetadata', () => { if (!song.duration) song.duration = audio.duration; });
 
   $('export-btn').addEventListener('click', exportChordPro);
+  $('pdf-btn').addEventListener('click', exportPdf);
   $('print-btn').addEventListener('click', () => window.print());
 });

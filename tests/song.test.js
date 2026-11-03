@@ -236,3 +236,57 @@ test('guesses artist and title from file names', () => {
   assert.deepEqual(toPlain(ctx.guessMetaFromFilename('03 - Israel Kamakawiwoole - Over the Rainbow.mp3')), { artist: 'Israel Kamakawiwoole', title: 'Over the Rainbow' });
   assert.deepEqual(toPlain(ctx.guessMetaFromFilename('song.wav')), { artist: '', title: 'song' });
 });
+
+// ── PDF export ─────────────────────────────────────────────
+
+function pdfString(bytes) {
+  let s = '';
+  for (const b of bytes) s += String.fromCharCode(b);
+  return s;
+}
+
+test('chord-sheet PDF is structurally valid with correct xref offsets', () => {
+  const ctx = loadUkeEngine();
+  const bytes = ctx.buildChordSheetPdf({
+    title: 'Over (the) Rainbow \\ test',
+    artist: 'Someone',
+    details: ['Key: G major', 'Tuning: baritone DGBE'],
+    diagrams: [{ name: 'G', frets: [0, 0, 0, 3], notes: ['D', 'G', 'B', 'G'], stringNames: ['D', 'G', 'B', 'E'] }],
+    rows: [{ chordLine: 'G         Em', text: 'Somewhere over the rainbow ’quoted’' }],
+    footer: 'Song Lab',
+  });
+  const s = pdfString(bytes);
+  assert.ok(s.startsWith('%PDF-1.4'));
+  assert.ok(s.trimEnd().endsWith('%%EOF'));
+  // Every xref entry points at the start of its object
+  const xrefAt = parseInt(s.match(/startxref\n(\d+)/)[1], 10);
+  assert.equal(s.slice(xrefAt, xrefAt + 4), 'xref');
+  const entries = s.slice(xrefAt).split('\n').slice(3).filter(l => / 00000 n $/.test(l));
+  entries.forEach((e, i) => assert.equal(s.slice(parseInt(e, 10)).split('\n')[0], `${i + 1} 0 obj`));
+  // Stream lengths match their content
+  for (const m of s.matchAll(/<< \/Length (\d+) >>\nstream\n/g)) {
+    const start = m.index + m[0].length;
+    assert.equal(s.slice(start + parseInt(m[1], 10), start + parseInt(m[1], 10) + 10), '\nendstream');
+  }
+  // Text is escaped and curly quotes are mapped to WinAnsi-safe characters
+  assert.match(s, /\(Over \\\(the\\\) Rainbow \\\\ test\) Tj/);
+  assert.match(s, /'quoted'/);
+  assert.ok([...bytes].every(b => b <= 0xff));
+});
+
+test('long sheets paginate and long lines wrap without splitting chord names', () => {
+  const ctx = loadUkeEngine();
+  const rows = Array.from({ length: 80 }, (_, i) => ({ chordLine: 'C       G', text: `Line number ${i}` }));
+  const s = pdfString(ctx.buildChordSheetPdf({ title: 'Long', rows }));
+  const count = parseInt(s.match(/\/Type \/Pages \/Kids \[[^\]]*\] \/Count (\d+)/)[1], 10);
+  assert.ok(count >= 2, `pages ${count}`);
+  assert.match(s, new RegExp(`Page ${count} of ${count}`));
+
+  const chords = 'C' + ' '.repeat(70) + 'Gmaj7' + ' '.repeat(10) + 'Am';
+  const words = 'word '.repeat(20).trim();
+  const parts = toPlain(ctx.wrapSheetRow(chords, words, 77));
+  assert.ok(parts.length >= 2);
+  assert.ok(parts.every(p => p.chordLine.length <= 77 && p.text.length <= 77));
+  const names = parts.map(p => p.chordLine).join(' ').split(/\s+/).filter(Boolean);
+  assert.deepEqual(names, ['C', 'Gmaj7', 'Am']);
+});
