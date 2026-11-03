@@ -74,13 +74,25 @@ html/public/
     theme.js            Light/dark theme toggle
     atlas.js            Atlas page logic and event wiring
     identify.js         Fretboard interaction and result rendering
+    fretboard-model.js  Pure tap / drag / keyboard rules for the fretboard (unit tested)
     chord-detect.js     Audio → chords (FFT, chroma, templates, Viterbi, key)
     song-utils.js       Chord parsing/transposition, LRC, ChordPro, voicing choice
     pdf-export.js       Hand-written PDF generator for chord sheets (no libraries)
     song.js             Song Lab page logic
 ```
 
-Run the tests with `npm test`.
+## Testing
+
+The site itself has no dependencies; the tests need Node 18+.
+
+```
+npm install          # once: installs the Playwright test runner (dev only)
+npm test             # unit tests (node:test): music theory, chord detection, song utils, fretboard rules
+npx playwright install chromium   # once: the browser used by the browser tests
+npm run test:e2e     # browser tests: Identifier fretboard on desktop and an emulated iPhone
+```
+
+GitHub Actions runs both on every pull request (`.github/workflows/test.yml`).
 
 The original single-file version is preserved at `uke-chord-atlas.html` in the project root.
 

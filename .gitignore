@@ -5,3 +5,8 @@
 
 # OS cruft
 .DS_Store
+
+# Node / Playwright
+node_modules/
+test-results/
+playwright-report/
