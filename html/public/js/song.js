@@ -349,11 +349,58 @@ function resetLyrics() {
   $('lyrics-fetch-btn').disabled = false;
 }
 
+/** Duration from the browser's metadata parser (no full decode). NaN if unknown. */
+function probeDuration(file) {
+  return new Promise(resolve => {
+    const url = URL.createObjectURL(file);
+    const probe = document.createElement('audio');
+    let done = false;
+    const finish = (d) => {
+      if (done) return;
+      done = true;
+      clearTimeout(timer);
+      probe.removeAttribute('src');
+      probe.load();
+      URL.revokeObjectURL(url);
+      resolve(d);
+    };
+    const timer = setTimeout(() => finish(NaN), 5000);
+    probe.preload = 'metadata';
+    probe.addEventListener('loadedmetadata', () => finish(probe.duration));
+    probe.addEventListener('error', () => finish(NaN)); // let decodeAudioData decide
+    probe.src = url;
+  });
+}
+
+/** Drop the current recording: stop playback and free its decoded PCM and URL. */
+function releaseAudio() {
+  const audio = $('audio');
+  audio.pause();
+  audio.removeAttribute('src');
+  audio.load();
+  if (song.audioUrl) URL.revokeObjectURL(song.audioUrl);
+  song.audioUrl = null;
+  song.pcm = null;
+  song.file = null;
+  song.segments = [];
+  song.duration = 0;
+  $('reanalyze-btn').hidden = true;
+}
+
 async function loadAudioFile(file) {
   if (!file) return;
   const token = ++loadToken;
   if (file.size > MAX_FILE_BYTES) {
     setStatus(`That file is ${Math.round(file.size / 1048576)} MB; Song Lab handles files up to ${MAX_FILE_BYTES / 1048576} MB.`, true);
+    return;
+  }
+  // Check the length from the file's metadata before decoding: compressed
+  // files can be hours long while still small, and decoding allocates it all.
+  setStatus(`Reading “${file.name}”…`);
+  const length = await probeDuration(file);
+  if (token !== loadToken) return;
+  if (Number.isFinite(length) && length > MAX_AUDIO_SECONDS) {
+    setStatus(`That recording is ${formatTime(length)} long; Song Lab handles up to ${MAX_AUDIO_SECONDS / 60} minutes.`, true);
     return;
   }
 
@@ -447,7 +494,7 @@ function loadSheet() {
     return;
   }
   loadToken++; // cancel any audio decode/analysis still running
-  $('audio').pause();
+  releaseAudio();
   resetLyrics();
   song.source = 'sheet';
   song.sheetRows = parsed.rows.map(r => ({ text: r.text, chords: r.chords.map(c => ({ pos: c.pos, name: c.name, chord: parseChordName(c.name) })) }));
@@ -543,9 +590,11 @@ async function fetchLyrics() {
 }
 
 function applyPastedLyrics() {
-  const text = $('lyrics-input').value;
-  song.lyrics = parseLrc(text);
-  if (!song.lyrics.length) { setStatus('No lyrics to use.', true); return; }
+  const parsed = parseLrc($('lyrics-input').value);
+  if (!parsed.length) { setStatus('No lyrics to use.', true); return; } // keep what's loaded
+  lyricsToken++; // a lookup still in flight must not replace the pasted lyrics
+  $('lyrics-fetch-btn').disabled = false;
+  song.lyrics = parsed;
   const synced = song.lyrics.some(l => l.time != null);
   setStatus(synced ? `Using ${song.lyrics.length} timed lyric lines.` : 'Using plain lyrics (no timestamps).');
   renderAll();
