@@ -21,11 +21,17 @@ function renderTuningToggle(containerId, onSwitchCallback) {
     <button type="button" class="tuning-btn" aria-pressed="${tuning === 'baritone'}" data-tuning="baritone">Baritone</button>
   `;
 
+  // Re-rendering (switchTuning re-renders every toggle) must not stack
+  // another click listener each time: bind once per container and keep the
+  // first callback a page registered.
+  if (onSwitchCallback) container._tuningCallback = onSwitchCallback;
+  if (container._tuningBound) return;
+  container._tuningBound = true;
   container.addEventListener('click', e => {
     const btn = e.target.closest('.tuning-btn');
     if (btn && btn.dataset.tuning) {
       switchTuning(btn.dataset.tuning);
-      if (onSwitchCallback) onSwitchCallback();
+      if (container._tuningCallback) container._tuningCallback();
     }
   });
 }

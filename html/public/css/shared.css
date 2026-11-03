@@ -421,6 +421,8 @@ legend {
   .header-top { padding-right: 52px; }
   .header-controls { top: 16px; right: 16px; }
   .site-footer { padding: 20px 16px; }
+  .site-nav { width: 100%; }
+  .site-nav a { flex: 1 1 0; text-align: center; padding: 8px 4px; letter-spacing: 1.5px; font-size: 12px; }
 }
 
 @media (prefers-reduced-motion: reduce) {

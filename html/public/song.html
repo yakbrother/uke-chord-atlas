@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="color-scheme" content="light dark">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; media-src 'self' blob:; connect-src 'self' https://lrclib.net;">
+<meta name="description" content="Detect the chords in a song, transpose them, and play along with ukulele diagrams for standard, low-G, or baritone DGBE tuning, with synced lyrics.">
+<meta name="author" content="Tim Eaton">
+<title>Song Lab · Uke Chord Atlas</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Jost:wght@300;400;500;600;700&family=Pacifico&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/shared.css">
+<link rel="stylesheet" href="css/atlas.css">
+<link rel="stylesheet" href="css/song.css">
+<link rel="stylesheet" href="css/print.css" media="print">
+<script>
+  (function () {
+    try {
+      const saved = localStorage.getItem('uca-theme');
+      const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+      document.documentElement.setAttribute('data-theme', saved || (prefersDark ? 'dark' : 'light'));
+    } catch (e) { /* localStorage may be unavailable */ }
+  })();
+</script>
+</head>
+<body>
+<a href="#song-main" class="skip-link">Skip to main content</a>
+<div id="app">
+
+  <header>
+    <div class="header-top">
+      <h1>Song Lab</h1>
+      <span class="subtitle">detect · transpose · play along</span>
+    </div>
+    <div class="header-controls">
+      <button type="button" class="theme-toggle" id="theme-toggle" aria-label="Switch to dark theme">
+        <span class="icon-light" aria-hidden="true">&#9790;</span>
+        <span class="icon-dark" aria-hidden="true">&#9728;</span>
+      </button>
+    </div>
+
+    <div class="nav-row">
+      <nav class="site-nav" aria-label="Site navigation">
+        <a href="index.html">Atlas</a>
+        <a href="identify.html">Identifier</a>
+        <a href="progressions.html">Progressions</a>
+        <a href="song.html" aria-current="page">Song</a>
+      </nav>
+      <div class="tuning-toggle" id="tuning-toggle" role="group" aria-label="Tuning">
+        <!-- filled by JS -->
+      </div>
+    </div>
+  </header>
+
+  <main id="song-main" class="song-main">
+
+    <!-- ── 1. Load ─────────────────────────────────────── -->
+    <section class="song-panel" aria-labelledby="load-heading">
+      <h2 id="load-heading" class="panel-title">1 · Load a song</h2>
+
+      <div class="source-tabs" role="tablist" aria-label="Song source">
+        <button type="button" role="tab" id="tab-audio" aria-controls="pane-audio" aria-selected="true" class="source-tab">Audio file</button>
+        <button type="button" role="tab" id="tab-sheet" aria-controls="pane-sheet" aria-selected="false" class="source-tab" tabindex="-1">Paste a chord chart</button>
+      </div>
+
+      <div id="pane-audio" role="tabpanel" aria-labelledby="tab-audio" class="source-pane">
+        <label class="drop-zone" id="drop-zone">
+          <input type="file" id="audio-file" accept="audio/*,.mp3,.m4a,.wav,.ogg,.flac,.aac" class="visually-hidden">
+          <span class="drop-main">Drop an audio file here, or <u>choose one</u></span>
+          <span class="drop-sub">MP3, M4A, WAV, OGG, FLAC. The audio stays on your device; analysis runs in your browser.</span>
+        </label>
+        <div class="option-row">
+          <label class="check"><input type="checkbox" id="opt-sevenths"> Detect 7th chords</label>
+          <label class="range">Smoothing
+            <input type="range" id="opt-smoothing" min="0" max="4" step="1" value="2" aria-describedby="smoothing-hint">
+          </label>
+          <span id="smoothing-hint" class="hint">Raise it if the chords change too often.</span>
+          <button type="button" id="reanalyze-btn" class="btn" hidden>Re-analyze</button>
+        </div>
+      </div>
+
+      <div id="pane-sheet" role="tabpanel" aria-labelledby="tab-sheet" class="source-pane" hidden>
+        <label for="sheet-input" class="field-label">ChordPro (<code>[C]Hello [G]world</code>) or chords above lyrics</label>
+        <textarea id="sheet-input" class="sheet-input" rows="10" spellcheck="false" placeholder="{title: Example}
+[C]Somewhere [Em]over the rainbow
+[F]Way up [C]high
+
+or
+
+C        Em
+Somewhere over the rainbow"></textarea>
+        <div class="option-row">
+          <button type="button" id="sheet-load-btn" class="btn btn-primary">Load chart</button>
+        </div>
+      </div>
+
+      <div class="meta-row">
+        <label class="field">Artist <input type="text" id="meta-artist" autocomplete="off"></label>
+        <label class="field">Title <input type="text" id="meta-title" autocomplete="off"></label>
+        <button type="button" id="lyrics-fetch-btn" class="btn" aria-describedby="lyrics-privacy">Find synced lyrics</button>
+      </div>
+      <p id="lyrics-privacy" class="hint">Looking up lyrics sends the artist, title and track length above to <a href="https://lrclib.net" rel="noopener noreferrer">LRCLIB</a>. Nothing is sent unless you press the button.</p>
+      <details class="lyrics-paste">
+        <summary>Paste lyrics instead (LRC with timestamps, or plain text)</summary>
+        <textarea id="lyrics-input" class="sheet-input" rows="6" spellcheck="false" placeholder="[00:12.30] First line of the song&#10;[00:15.80] Second line"></textarea>
+        <div class="option-row">
+          <button type="button" id="lyrics-apply-btn" class="btn">Use these lyrics</button>
+        </div>
+      </details>
+
+      <p id="status" class="status" role="status" aria-live="polite"></p>
+      <div class="progress" id="progress" hidden><div class="progress-bar" id="progress-bar"></div></div>
+    </section>
+
+    <!-- ── 2. Key & transpose ──────────────────────────── -->
+    <section class="song-panel song-controls" id="controls" aria-labelledby="key-heading" hidden>
+      <h2 id="key-heading" class="panel-title">2 · Key &amp; transpose</h2>
+      <div class="key-line">
+        <div class="key-box">
+          <span class="key-caption">Original</span>
+          <span class="key-value" id="orig-key">–</span>
+        </div>
+        <span class="key-arrow" aria-hidden="true">&#8594;</span>
+        <div class="key-box">
+          <span class="key-caption">Playing in</span>
+          <span class="key-value" id="play-key">–</span>
+        </div>
+        <div class="transpose" role="group" aria-label="Transpose">
+          <button type="button" class="btn step" id="tr-down" aria-label="Transpose down a semitone">&minus;</button>
+          <output id="tr-value" class="tr-value" aria-live="polite">0</output>
+          <button type="button" class="btn step" id="tr-up" aria-label="Transpose up a semitone">+</button>
+          <button type="button" class="btn" id="tr-reset">Reset</button>
+        </div>
+      </div>
+      <div class="option-row">
+        <button type="button" class="btn" id="easy-btn">Easiest shapes</button>
+        <button type="button" class="btn" id="easy-capo-btn">Easiest with a capo</button>
+        <label class="check"><input type="checkbox" id="opt-flats"> Prefer flats</label>
+      </div>
+      <p class="capo-note" id="capo-note"></p>
+    </section>
+
+    <!-- ── 3. Player ───────────────────────────────────── -->
+    <section class="song-panel" id="player-panel" aria-labelledby="player-heading" hidden>
+      <h2 id="player-heading" class="panel-title">3 · Play along</h2>
+      <audio id="audio" controls preload="auto"></audio>
+      <div class="now-next">
+        <div class="now">
+          <span class="nn-caption">Now</span>
+          <span class="nn-name" id="now-name">–</span>
+          <div class="nn-diagram chord-card" id="now-diagram"></div>
+        </div>
+        <div class="next">
+          <span class="nn-caption">Next</span>
+          <span class="nn-name" id="next-name">–</span>
+          <div class="nn-diagram chord-card" id="next-diagram"></div>
+        </div>
+      </div>
+      <label class="field lyric-offset">Lyrics offset (s)
+        <input type="number" id="lyrics-offset" value="0" step="0.25" inputmode="decimal">
+      </label>
+    </section>
+
+    <!-- ── 4. Chord palette ────────────────────────────── -->
+    <section class="song-panel" id="palette-panel" aria-labelledby="palette-heading" hidden>
+      <h2 id="palette-heading" class="panel-title">Chords in this song</h2>
+      <p class="hint">Tap a diagram for another voicing.</p>
+      <div class="palette" id="palette"></div>
+    </section>
+
+    <!-- ── 5. Sheet ────────────────────────────────────── -->
+    <section class="song-panel" id="sheet-panel" aria-labelledby="sheet-heading" hidden>
+      <div class="sheet-head">
+        <h2 id="sheet-heading" class="panel-title">Chord sheet</h2>
+        <div class="sheet-actions">
+          <button type="button" class="btn" id="edit-toggle" aria-pressed="false" hidden>Fix chords</button>
+          <button type="button" class="btn" id="pdf-btn">Download PDF</button>
+          <button type="button" class="btn" id="export-btn">Download ChordPro</button>
+          <button type="button" class="btn" id="print-btn">Print</button>
+        </div>
+      </div>
+      <div class="timeline" id="timeline" aria-label="Detected chords over time"></div>
+      <div class="sheet" id="sheet"></div>
+    </section>
+
+  </main>
+
+  <footer class="site-footer" role="contentinfo">
+    <p>Lyrics from <a href="https://lrclib.net" rel="noopener noreferrer">LRCLIB</a> when available. Automatic detection is a starting point; fix any wrong chords with “Fix chords”.</p>
+    <p>&copy; 2025 Tim Eaton. All rights reserved.</p>
+  </footer>
+</div>
+
+<div class="info-strip" id="info-strip" role="status" aria-live="polite"></div>
+
+<script src="js/music-theory.js"></script>
+<script src="js/diagram.js"></script>
+<script src="js/theme.js"></script>
+<script src="js/tuning.js"></script>
+<script src="js/chord-detect.js"></script>
+<script src="js/song-utils.js"></script>
+<script src="js/pdf-export.js"></script>
+<script src="js/song.js"></script>
+</body>
+</html>
