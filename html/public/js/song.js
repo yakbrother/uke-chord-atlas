@@ -352,6 +352,27 @@ function resetLyrics() {
   $('lyrics-fetch-btn').disabled = false;
 }
 
+// Without a known length, ~20 minutes of 320 kbps MP3 is ~48 MB.
+const MAX_UNKNOWN_LENGTH_BYTES = 60 * 1024 * 1024;
+let decodeQueue = Promise.resolve();
+
+/** Duration of a PCM WAV file from its RIFF header (no decode). NaN if not a WAV. */
+async function wavDuration(file) {
+  try {
+    const head = new DataView(await file.slice(0, 4096).arrayBuffer());
+    const tag = (o) => String.fromCharCode(head.getUint8(o), head.getUint8(o + 1), head.getUint8(o + 2), head.getUint8(o + 3));
+    if (head.byteLength < 12 || tag(0) !== 'RIFF' || tag(8) !== 'WAVE') return NaN;
+    let off = 12, byteRate = 0;
+    while (off + 8 <= head.byteLength) {
+      const id = tag(off), size = head.getUint32(off + 4, true);
+      if (id === 'fmt ' && off + 16 <= head.byteLength) byteRate = head.getUint32(off + 16, true);
+      if (id === 'data') return byteRate ? Math.min(size, file.size - off - 8) / byteRate : NaN;
+      off += 8 + size + (size & 1);
+    }
+  } catch (e) { /* fall through */ }
+  return NaN;
+}
+
 /** Duration from the browser's metadata parser (no full decode). NaN if unknown. */
 function probeDuration(file) {
   return new Promise(resolve => {
@@ -403,15 +424,29 @@ async function loadAudioFile(file) {
   // Check the length from the file's metadata before decoding: compressed
   // files can be hours long while still small, and decoding allocates it all.
   setStatus(`Reading “${file.name}”…`);
-  const length = await probeDuration(file);
+  let length = await wavDuration(file);
+  if (!Number.isFinite(length)) length = await probeDuration(file);
   if (token !== loadToken) return;
   if (Number.isFinite(length) && length > MAX_AUDIO_SECONDS) {
     setStatus(`That recording is ${formatTime(length)} long; Song Lab handles up to ${MAX_AUDIO_SECONDS / 60} minutes.`, true);
     return;
   }
+  // Length unknown (e.g. iOS didn't report it): only decode compressed files
+  // small enough that they can't be far beyond the time limit.
+  if (!Number.isFinite(length) && file.size > MAX_UNKNOWN_LENGTH_BYTES) {
+    setStatus(`Couldn't read the length of “${file.name}”, and at ${Math.round(file.size / 1048576)} MB it may be too long to analyze. Try a file under ${MAX_UNKNOWN_LENGTH_BYTES / 1048576} MB.`, true);
+    return;
+  }
 
+  // One decode at a time: a stale decode can't be cancelled, so a newer load
+  // waits for it rather than holding two full recordings in memory at once.
+  const previousDecode = decodeQueue;
+  let releaseDecode;
+  decodeQueue = new Promise(r => { releaseDecode = r; });
   setStatus(`Decoding “${file.name}”…`);
   setProgress(0.1);
+  await previousDecode;
+  if (token !== loadToken) { releaseDecode(); return; }
   await nextFrame();
   let pcm, ctx = null;
   try {
@@ -435,6 +470,7 @@ async function loadAudioFile(file) {
     return; // previous song (audio + analysis) stays as it was
   } finally {
     if (ctx && ctx.close) ctx.close().catch(() => {});
+    releaseDecode();
   }
   if (token !== loadToken) return; // a newer file or chart was loaded meanwhile
 

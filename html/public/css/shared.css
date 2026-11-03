@@ -426,7 +426,7 @@ legend {
 }
 
 /* Touch screens: finger-sized nav and tuning buttons */
-@media (pointer: coarse) {
+@media (any-pointer: coarse) {
   .tuning-btn { min-height: 44px; }
   .site-nav a { min-height: 44px; display: flex; align-items: center; justify-content: center; }
 }

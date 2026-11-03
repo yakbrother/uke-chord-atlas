@@ -274,10 +274,10 @@
 }
 
 /* Touch screens: give small controls a finger-sized hit area (~44px) */
-@media (pointer: coarse) {
+@media (any-pointer: coarse) {
   .btn, .source-tab { min-height: 44px; }
   .check { min-height: 44px; }
-  .lyrics-paste summary { min-height: 44px; display: flex; align-items: center; }
+  .lyrics-paste summary { padding: 12px 0; } /* keeps the native disclosure arrow */
   .seg { min-height: 48px; min-width: 60px; }
   .chord-card:hover { transform: none; } /* no sticky hover lift after a tap */
 }
