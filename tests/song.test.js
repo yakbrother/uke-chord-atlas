@@ -71,6 +71,14 @@ test('a completely silent recording reports no key', () => {
   assert.ok(res.segments.every(x => x.type === 'N'));
 });
 
+test('phase-inverted stereo still yields chords', () => {
+  const ctx = loadUkeEngine();
+  const left = concat([C, G].map(c => synthChord(c, 2)));
+  const right = left.map(x => -x);
+  const res = ctx.detectChords([left, right], SR);
+  assert.deepEqual(detectedLabels(ctx, res.segments), ['C', 'G']);
+});
+
 test('7th detection finds a dominant 7th when enabled', () => {
   const ctx = loadUkeEngine();
   const G7 = [43, 55, 59, 62, 65];

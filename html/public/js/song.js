@@ -338,6 +338,8 @@ function seek(t) {
 let loadToken = 0;
 let lyricsToken = 0;
 const MAX_AUDIO_SECONDS = 20 * 60; // keeps decoded PCM to a few hundred MB at most
+// Checked before decoding: ~20 min of uncompressed 16-bit stereo WAV is ~210 MB
+const MAX_FILE_BYTES = 250 * 1024 * 1024;
 
 function resetLyrics() {
   lyricsToken++; // drop any lookup still in flight for the previous song
@@ -350,16 +352,19 @@ function resetLyrics() {
 async function loadAudioFile(file) {
   if (!file) return;
   const token = ++loadToken;
+  if (file.size > MAX_FILE_BYTES) {
+    setStatus(`That file is ${Math.round(file.size / 1048576)} MB; Song Lab handles files up to ${MAX_FILE_BYTES / 1048576} MB.`, true);
+    return;
+  }
 
   setStatus(`Decoding “${file.name}”…`);
   setProgress(0.1);
   await nextFrame();
-  let pcm;
+  let pcm, ctx = null;
   try {
     const AC = window.AudioContext || window.webkitAudioContext;
-    const ctx = new AC();
+    ctx = new AC();
     const buf = await ctx.decodeAudioData(await file.arrayBuffer());
-    if (ctx.close) ctx.close();
     if (buf.duration > MAX_AUDIO_SECONDS) {
       if (token !== loadToken) return;
       setProgress(null);
@@ -375,6 +380,8 @@ async function loadAudioFile(file) {
     setProgress(null);
     setStatus('Could not decode that file. Try MP3, M4A, or WAV.', true);
     return; // previous song (audio + analysis) stays as it was
+  } finally {
+    if (ctx && ctx.close) ctx.close().catch(() => {});
   }
   if (token !== loadToken) return; // a newer file or chart was loaded meanwhile
 

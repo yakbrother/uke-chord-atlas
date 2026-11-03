@@ -69,13 +69,22 @@ function fftInPlace(re, im) {
 
 // ── Pre-processing ───────────────────────────────────────────
 
-/** Average channels into one Float32Array. */
+/**
+ * Average channels into one Float32Array. If averaging cancels most of the
+ * energy (channels largely phase-inverted), fall back to the loudest
+ * single channel so the music doesn't vanish before analysis.
+ */
 function mixToMono(channels) {
   if (channels.length === 1) return channels[0];
   const n = channels[0].length;
   const out = new Float32Array(n);
   for (const ch of channels) for (let i = 0; i < n; i++) out[i] += ch[i];
   for (let i = 0; i < n; i++) out[i] /= channels.length;
+  const energy = (x) => { let e = 0; for (let i = 0; i < x.length; i += 4) e += x[i] * x[i]; return e; };
+  const chE = channels.map(energy);
+  const loudest = chE.indexOf(Math.max(...chE));
+  // In-phase content keeps ~100% of the per-channel energy; uncorrelated ~50%.
+  if (chE[loudest] > 0 && energy(out) < 0.1 * chE[loudest]) return channels[loudest];
   return out;
 }
 
