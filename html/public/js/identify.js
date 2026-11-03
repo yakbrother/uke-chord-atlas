@@ -116,29 +116,45 @@ function renderFretboard() {
 }
 
 /** Open-string rings and finger dots (redrawn on every change; the board stays put). */
+const SVG_NS = 'http://www.w3.org/2000/svg';
+
+/** Create an SVG element; attribute values and text are set as data, never parsed as markup. */
+function svgEl(tag, attrs, text) {
+  const node = document.createElementNS(SVG_NS, tag);
+  for (const [k, v] of Object.entries(attrs)) node.setAttribute(k, String(v));
+  if (text !== undefined) node.textContent = text;
+  return node;
+}
+
+/** Open-string rings and finger dots (redrawn on every change; the board stays put). */
 function renderDots(focusString) {
   const layer = document.getElementById('fb-dynamic');
   if (!layer) return;
   const strNames = currentStringNames();
-  let g = '';
+  const nodes = [];
   for (let s = 0; s < STRINGS; s++) {
     const x = stringX(s);
-    const openNote = noteName(noteAtCurrent(s, 0), 0);
     const isOpen = selectedFrets[s] === 0;
-    g += `<circle class="fb-open-ring${isOpen ? ' fb-selected' : ''}" cx="${x}" cy="${OPEN_Y}" r="10"/>`;
-    g += `<text class="fb-open-note${isOpen ? '' : ' fb-dim'}" x="${x}" y="${OPEN_Y + 4}" text-anchor="middle">${openNote}</text>`;
+    nodes.push(svgEl('circle', { class: 'fb-open-ring' + (isOpen ? ' fb-selected' : ''), cx: x, cy: OPEN_Y, r: 10 }));
+    nodes.push(svgEl('text', { class: 'fb-open-note' + (isOpen ? '' : ' fb-dim'), x, y: OPEN_Y + 4, 'text-anchor': 'middle' },
+      noteName(noteAtCurrent(s, 0), 0)));
 
     const f = selectedFrets[s];
     if (f > 0) {
       const note = noteName(noteAtCurrent(s, f), 0);
       const dragging = drag && drag.s === s && drag.moved;
-      g += `<g class="fb-dot-g${dragging ? ' fb-dragging' : ''}" data-string="${s}" data-fret="${f}" tabindex="0" role="button"
-        aria-label="${strNames[s]} string, fret ${f}, ${note}. Press Delete to remove; arrow keys move it.">
-        <circle class="fb-dot fb-selected" cx="${x}" cy="${fretY(f)}" r="${FB.cellH * 0.34}"/>
-        <text class="fb-dot-text" x="${x}" y="${fretY(f) + 4}" text-anchor="middle">${note}</text></g>`;
+      const g = svgEl('g', {
+        class: 'fb-dot-g' + (dragging ? ' fb-dragging' : ''), 'data-string': s, 'data-fret': f,
+        tabindex: 0, role: 'button',
+        'aria-label': `${strNames[s]} string, fret ${f}, ${note}. Press Delete to remove; arrow keys move it.`,
+      });
+      g.append(
+        svgEl('circle', { class: 'fb-dot fb-selected', cx: x, cy: fretY(f), r: FB.cellH * 0.34 }),
+        svgEl('text', { class: 'fb-dot-text', x, y: fretY(f) + 4, 'text-anchor': 'middle' }, note));
+      nodes.push(g);
     }
   }
-  layer.innerHTML = g;
+  layer.replaceChildren(...nodes);
   if (focusString !== undefined) {
     const dot = layer.querySelector(`.fb-dot-g[data-string="${focusString}"]`);
     if (dot) dot.focus();
@@ -183,6 +199,8 @@ function commit(focusString) {
 
 function onPointerDown(e) {
   if (e.button !== undefined && e.button !== 0) return;
+  if (drag) return;   // one drag at a time: a second finger must not strand the first
+  pending = null;     // every new press starts a fresh gesture
   const cell = cellFromEvent(e);
   if (!cell) return;
   if (cell.f > 0 && selectedFrets[cell.s] === cell.f) {
@@ -192,6 +210,8 @@ function onPointerDown(e) {
     e.preventDefault();
   } else {
     pending = { s: cell.s, f: cell.f, x0: e.clientX, y0: e.clientY, pointerId: e.pointerId };
+    // Capture so a release outside the board still reaches us and clears the tap
+    e.currentTarget.setPointerCapture(e.pointerId);
   }
 }
 
@@ -204,6 +224,8 @@ function onPointerMove(e) {
   if (!drag.moved && Math.hypot(e.clientX - drag.x0, e.clientY - drag.y0) < DRAG_THRESHOLD) return;
   drag.moved = true;
   const to = clampedCell(e);
+  // A string that already has a finger can't take another: stay on the current string
+  if (to.s !== drag.s && selectedFrets[to.s] > 0) to.s = drag.s;
   if (to.s === drag.s && to.f === drag.f) { renderDots(); return; }
   if (to.s !== drag.s) selectedFrets[drag.s] = 0; // finger leaves its old string
   selectedFrets[to.s] = to.f;
@@ -260,8 +282,11 @@ function onDotKey(e) {
       selectedFrets[s] = Math.min(MAX_FRET, f + 1);
       break;
     case 'ArrowLeft': case 'ArrowRight': {
-      const t = s + (e.key === 'ArrowLeft' ? -1 : 1);
-      if (t < 0 || t >= STRINGS) return;
+      // Move to the nearest string in that direction that has no finger on it
+      const step = e.key === 'ArrowLeft' ? -1 : 1;
+      let t = s + step;
+      while (t >= 0 && t < STRINGS && selectedFrets[t] > 0) t += step;
+      if (t < 0 || t >= STRINGS) { e.preventDefault(); return; }
       selectedFrets[s] = 0;
       selectedFrets[t] = f;
       focus = t;
