@@ -14,12 +14,17 @@ const TYPES = {
 
 http.createServer((req, res) => {
   const url = new URL(req.url, 'http://localhost');
-  let file = path.normalize(path.join(ROOT, decodeURIComponent(url.pathname)));
-  if (!file.startsWith(ROOT)) { res.writeHead(403); res.end(); return; }
+  let file;
+  try {
+    file = path.resolve(ROOT, '.' + path.sep + decodeURIComponent(url.pathname));
+  } catch (e) { res.writeHead(400); res.end(); return; } // malformed %-escape
+  // Must stay inside ROOT; a plain prefix check would also accept siblings like "public-old"
+  const rel = path.relative(ROOT, file);
+  if (rel.startsWith('..') || path.isAbsolute(rel)) { res.writeHead(403); res.end(); return; }
   if (fs.existsSync(file) && fs.statSync(file).isDirectory()) file = path.join(file, 'index.html');
   fs.readFile(file, (err, data) => {
     if (err) { res.writeHead(404); res.end('Not found'); return; }
     res.writeHead(200, { 'Content-Type': TYPES[path.extname(file)] || 'application/octet-stream' });
     res.end(data);
   });
-}).listen(PORT, () => console.log(`Serving ${ROOT} on http://localhost:${PORT}`));
+}).listen(PORT, '127.0.0.1', () => console.log(`Serving ${ROOT} on http://localhost:${PORT}`));
