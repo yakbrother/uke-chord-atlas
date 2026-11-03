@@ -55,10 +55,20 @@ test('silence is reported as no-chord', () => {
   const ctx = loadUkeEngine();
   const audio = concat([new Float32Array(SR * 2), synthChord(G, 3)]);
   const res = ctx.detectChords([audio], SR);
-  assert.equal(res.segments[0].type, 'N');
+  // Every segment that overlaps the 2 s of leading silence must be no-chord
+  // (allowing for the analysis window straddling the boundary).
+  for (const seg of res.segments.filter(x => x.start < 1.6)) assert.equal(seg.type, 'N', `chord at ${seg.start}s`);
+  assert.ok(res.segments[0].end > 1.6 && res.segments[0].end < 2.5, `silence ends at ${res.segments[0].end}`);
   const last = res.segments[res.segments.length - 1];
   assert.equal(last.type, 'maj');
   assert.equal(last.root, 7);
+});
+
+test('a completely silent recording reports no key', () => {
+  const ctx = loadUkeEngine();
+  const res = ctx.detectChords([new Float32Array(SR * 3)], SR);
+  assert.equal(res.key, null);
+  assert.ok(res.segments.every(x => x.type === 'N'));
 });
 
 test('7th detection finds a dominant 7th when enabled', () => {
@@ -81,6 +91,12 @@ test('parses common chord spellings', () => {
   assert.equal(p('F#m7').root, 6);
   assert.equal(p('C/E').bass, 4);
   assert.equal(p('Bdim').typeId, null); // valid chord, no diagram
+  assert.equal(p('C6/9').typeId, '69');
+  assert.equal(p('C6/9').bass, null);
+  assert.equal(p('C6/9/E').bass, 4);
+  assert.equal(p('C6/A').typeId, '6');
+  assert.equal(p('C6/A').bass, 9);
+  assert.equal(ctx.transposeChordName('C6/9', 2, false), 'D6/9');
   assert.equal(ctx.parseChordName('Amazing'), null);
   assert.equal(ctx.parseChordName('Hello'), null);
 });
@@ -178,6 +194,16 @@ test('parses ChordPro and chords-over-lyrics, and writes ChordPro', () => {
   const out = ctx.toChordPro({ title: 'Rainbow', key: 'C' }, [{ text: 'Somewhere over', chords: [{ pos: 0, label: 'C' }, { pos: 10, label: 'Em' }] }], []);
   assert.match(out, /\{title: Rainbow\}/);
   assert.match(out, /\[C\]Somewhere \[Em\]over/);
+
+  // Chords sharing a position keep their order through a round trip
+  const twin = toPlain(ctx.parseChordSheet('[C][G]word'));
+  const twinOut = ctx.toChordPro({}, twin.rows.map(r => ({ text: r.text, chords: r.chords.map(c => ({ pos: c.pos, label: c.name })) })), []);
+  assert.match(twinOut, /\[C\]\[G\]word/);
+
+  // No synced rows: progression, then the plain lyrics
+  const plain = ctx.toChordPro({}, null, [{ label: 'G' }, { label: 'C' }], ['First line', 'Second line']);
+  assert.match(plain, /\[G\] \[C\]/);
+  assert.match(plain, /First line\nSecond line/);
 });
 
 test('a lyric line with chord-like words is not a chord line', () => {
@@ -191,6 +217,10 @@ test('guesses keys from chord lists', () => {
   const k = names => toPlain(ctx.guessKeyFromChords(names.map(ctx.parseChordName)));
   assert.deepEqual(k(['G', 'C', 'D', 'G']), { root: 7, mode: 'major' });
   assert.deepEqual(k(['Am', 'F', 'C', 'G', 'Am']), { root: 9, mode: 'minor' });
+  // m6/m11 have no diagram type but still count as minor
+  assert.equal(ctx.isMinorChord(ctx.parseChordName('Am6')), true);
+  assert.equal(ctx.isMinorChord(ctx.parseChordName('Cmaj7')), false);
+  assert.deepEqual(k(['Am6', 'F', 'C', 'G', 'Am6']), { root: 9, mode: 'minor' });
 });
 
 test('guesses artist and title from file names', () => {

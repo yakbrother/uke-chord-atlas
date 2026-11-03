@@ -99,8 +99,9 @@ Somewhere over the rainbow"></textarea>
       <div class="meta-row">
         <label class="field">Artist <input type="text" id="meta-artist" autocomplete="off"></label>
         <label class="field">Title <input type="text" id="meta-title" autocomplete="off"></label>
-        <button type="button" id="lyrics-fetch-btn" class="btn">Find synced lyrics</button>
+        <button type="button" id="lyrics-fetch-btn" class="btn" aria-describedby="lyrics-privacy">Find synced lyrics</button>
       </div>
+      <p id="lyrics-privacy" class="hint">Looking up lyrics sends the artist, title and track length above to <a href="https://lrclib.net" rel="noopener noreferrer">LRCLIB</a>. Nothing is sent unless you press the button.</p>
       <details class="lyrics-paste">
         <summary>Paste lyrics instead (LRC with timestamps, or plain text)</summary>
         <textarea id="lyrics-input" class="sheet-input" rows="6" spellcheck="false" placeholder="[00:12.30] First line of the song&#10;[00:15.80] Second line"></textarea>

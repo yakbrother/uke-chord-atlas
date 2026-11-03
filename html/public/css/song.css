@@ -257,6 +257,7 @@
 .row[data-time]:hover { background: var(--surface-2); }
 .row.active { border-left-color: var(--accent); background: var(--accent-subtle); }
 .row-chords { color: var(--accent); font-weight: 700; }
+.print-progression { display: none; }
 .sheet .hint { font-family: 'Jost', sans-serif; white-space: normal; margin-bottom: 10px; }
 
 @media (max-width: 640px) {
@@ -278,4 +279,6 @@
   .song-controls { position: static; box-shadow: none; }
   .row.active { background: none; border-left-color: transparent; }
   .row-chords { color: #000; }
+  .print-progression { display: block; margin-bottom: 12px; }
+  .sheet .hint { display: none; }
 }

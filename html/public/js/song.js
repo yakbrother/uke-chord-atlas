@@ -19,6 +19,7 @@ const song = {
   sheetRows: [],         // [{ text, chords: [{ pos, chord }] }]
   lyrics: [],            // [{ time|null, text }]
   origKey: null,         // { root, mode }
+  capo: 0,               // capo written on a pasted chart
   tuningCents: 0,
   transpose: 0,
   preferFlats: null,     // null = automatic
@@ -140,8 +141,9 @@ function renderControls() {
     if (song.tuningCents && Math.abs(song.tuningCents) >= 15) {
       note += ` The recording is about ${Math.abs(song.tuningCents)} cents ${song.tuningCents > 0 ? 'sharp' : 'flat'}; tune your strings to match.`;
     }
-  } else if (t < 0) {
-    note = `Or put a capo on fret ${-t} to keep the original key.`;
+  } else {
+    if (song.capo) note = `This chart is written for capo ${song.capo}. `;
+    if (t < 0) note += `Or put a capo on fret ${-t} to keep the original key.`;
   }
   $('capo-note').textContent = note.trim();
 }
@@ -207,13 +209,21 @@ function renderSheet() {
     return;
   }
   if (song.lyrics.length) {
-    sheet.innerHTML = `<p class="hint">These lyrics have no timestamps, so chords can't be placed on them. Follow the timeline above.</p>` +
+    sheet.innerHTML = progressionHtml() + `<p class="hint">These lyrics have no timestamps, so chords can't be placed on them. Follow the timeline above.</p>` +
       song.lyrics.map(l => `<div class="row"><div class="row-text">${esc(l.text) || '&nbsp;'}</div></div>`).join('');
     return;
   }
   sheet.innerHTML = song.source === 'audio'
-    ? '<p class="hint">Add lyrics (Find synced lyrics, or paste them) to see chords above the words.</p>'
+    ? progressionHtml() + '<p class="hint">Add lyrics (Find synced lyrics, or paste them) to see chords above the words.</p>'
     : '';
+}
+
+/** Printable progression for audio songs without synced lyrics (the timeline is screen-only). */
+function progressionHtml() {
+  const labels = song.segments.map(s => labelFor(s.chord)).filter(Boolean);
+  const lines = [];
+  for (let i = 0; i < labels.length; i += 8) lines.push(labels.slice(i, i + 8).join('  '));
+  return `<div class="print-progression">${lines.map(l => `<div class="row-chords">${esc(l)}</div>`).join('')}</div>`;
 }
 
 // ── Playback sync ───────────────────────────────────────────
@@ -274,43 +284,78 @@ function seek(t) {
 
 // ── Loading audio ───────────────────────────────────────────
 
+// Each load (audio file or chart) bumps this; async work started for an
+// older load checks it and discards its result instead of overwriting
+// state for whatever the user has loaded since.
+let loadToken = 0;
+let lyricsToken = 0;
+const MAX_AUDIO_SECONDS = 20 * 60; // keeps decoded PCM to a few hundred MB at most
+
+function resetLyrics() {
+  lyricsToken++; // drop any lookup still in flight for the previous song
+  song.lyrics = [];
+  song.lyricOffset = 0;
+  $('lyrics-offset').value = '0';
+  $('lyrics-fetch-btn').disabled = false;
+}
+
 async function loadAudioFile(file) {
   if (!file) return;
-  song.file = file;
-  const meta = guessMetaFromFilename(file.name);
-  if (!$('meta-artist').value && meta.artist) $('meta-artist').value = meta.artist;
-  if (!$('meta-title').value && meta.title) $('meta-title').value = meta.title;
-
-  if (song.audioUrl) URL.revokeObjectURL(song.audioUrl);
-  song.audioUrl = URL.createObjectURL(file);
-  $('audio').src = song.audioUrl;
+  const token = ++loadToken;
 
   setStatus(`Decoding “${file.name}”…`);
   setProgress(0.1);
   await nextFrame();
+  let pcm;
   try {
     const AC = window.AudioContext || window.webkitAudioContext;
     const ctx = new AC();
     const buf = await ctx.decodeAudioData(await file.arrayBuffer());
-    ctx.close && ctx.close();
+    if (ctx.close) ctx.close();
+    if (buf.duration > MAX_AUDIO_SECONDS) {
+      if (token !== loadToken) return;
+      setProgress(null);
+      setStatus(`That recording is ${formatTime(buf.duration)} long; Song Lab handles up to ${MAX_AUDIO_SECONDS / 60} minutes.`, true);
+      return;
+    }
     const channels = [];
     for (let c = 0; c < Math.min(2, buf.numberOfChannels); c++) channels.push(buf.getChannelData(c));
-    song.pcm = { channels, sampleRate: buf.sampleRate };
-    await analyze();
+    pcm = { channels, sampleRate: buf.sampleRate };
   } catch (err) {
     console.error(err);
+    if (token !== loadToken) return;
     setProgress(null);
     setStatus('Could not decode that file. Try MP3, M4A, or WAV.', true);
+    return; // previous song (audio + analysis) stays as it was
   }
+  if (token !== loadToken) return; // a newer file or chart was loaded meanwhile
+
+  // Decode succeeded: now replace the previous song's audio, metadata and lyrics.
+  const audio = $('audio');
+  audio.pause();
+  if (song.audioUrl) URL.revokeObjectURL(song.audioUrl);
+  song.audioUrl = URL.createObjectURL(file);
+  audio.src = song.audioUrl;
+  song.file = file;
+  song.pcm = pcm;
+  song.duration = 0;
+  resetLyrics();
+  const meta = guessMetaFromFilename(file.name);
+  $('meta-artist').value = meta.artist;
+  $('meta-title').value = meta.title;
+  await analyze(token);
 }
 
-async function analyze() {
-  if (!song.pcm) return;
+async function analyze(token) {
+  if (token === undefined) token = loadToken;
+  if (!song.pcm || token !== loadToken) return;
+  const pcm = song.pcm;
   setStatus('Listening for chords…');
   setProgress(0.5);
   await nextFrame();
+  if (token !== loadToken || song.pcm !== pcm) return;
   const t0 = performance.now();
-  const res = detectChords(song.pcm.channels, song.pcm.sampleRate, {
+  const res = detectChords(pcm.channels, pcm.sampleRate, {
     include7ths: $('opt-sevenths').checked,
     selfProb: SMOOTHING_LEVELS[parseInt($('opt-smoothing').value, 10)] || 0.92,
   });
@@ -321,18 +366,20 @@ async function analyze() {
     start: s.start, end: s.end,
     chord: s.type === 'N' ? null : { root: s.root, typeId: s.type, suffix: DETECTED_SUFFIX[s.type] || '', bass: null },
   }));
-  song.origKey = { root: res.key.root, mode: res.key.mode };
+  song.origKey = res.key ? { root: res.key.root, mode: res.key.mode } : null;
+  song.capo = 0;
   song.transpose = 0;
   song.voicingPick = {};
   song.editing = false;
   $('edit-toggle').setAttribute('aria-pressed', 'false');
+  $('edit-toggle').textContent = 'Fix chords';
   setProgress(1);
   const n = song.segments.filter(s => s.chord).length;
-  setStatus(`Found ${n} chord changes in ${formatTime(res.duration)} (analysis took ${((performance.now() - t0) / 1000).toFixed(1)} s). Likely key: ${keyLabel(song.origKey, 0)}.`);
+  const keyNote = song.origKey ? ` Likely key: ${keyLabel(song.origKey, 0)}.` : '';
+  setStatus(`Found ${n} chord changes in ${formatTime(res.duration)} (analysis took ${((performance.now() - t0) / 1000).toFixed(1)} s).${keyNote}`);
   setTimeout(() => setProgress(null), 600);
   $('reanalyze-btn').hidden = false;
   renderAll();
-  if (!song.lyrics.length && $('meta-title').value.trim()) fetchLyrics(true);
 }
 
 // ── Loading a pasted chart ──────────────────────────────────
@@ -344,59 +391,85 @@ function loadSheet() {
     setStatus('No chords found. Use [C] ChordPro brackets, or put chord names on their own line above the lyrics.', true);
     return;
   }
+  loadToken++; // cancel any audio decode/analysis still running
+  $('audio').pause();
+  resetLyrics();
   song.source = 'sheet';
   song.sheetRows = parsed.rows.map(r => ({ text: r.text, chords: r.chords.map(c => ({ pos: c.pos, name: c.name, chord: parseChordName(c.name) })) }));
   // Trim leading/trailing blank rows
   while (song.sheetRows.length && !song.sheetRows[0].text.trim() && !song.sheetRows[0].chords.length) song.sheetRows.shift();
   while (song.sheetRows.length && !song.sheetRows[song.sheetRows.length - 1].text.trim() && !song.sheetRows[song.sheetRows.length - 1].chords.length) song.sheetRows.pop();
-  if (parsed.meta.title) $('meta-title').value = parsed.meta.title;
-  if (parsed.meta.artist) $('meta-artist').value = parsed.meta.artist;
+  $('meta-title').value = parsed.meta.title || '';
+  $('meta-artist').value = parsed.meta.artist || '';
   let key = null;
   if (parsed.meta.key) {
     const k = parseChordName(parsed.meta.key);
-    if (k) key = { root: k.root, mode: k.typeId === 'min' ? 'minor' : 'major' };
+    if (k) key = { root: k.root, mode: isMinorChord(k) ? 'minor' : 'major' };
   }
   song.origKey = key || guessKeyFromChords(allChords());
+  const capo = parseInt(parsed.meta.capo, 10);
+  song.capo = capo > 0 ? capo : 0;
   song.transpose = 0;
   song.voicingPick = {};
-  if (parsed.meta.capo && parseInt(parsed.meta.capo, 10) > 0) {
-    // Chart written with a capo: shapes are relative to the capo
-    setStatus(`Loaded chart (written for capo ${parseInt(parsed.meta.capo, 10)}).`);
-  } else {
-    setStatus(`Loaded chart with ${allChords().length} chords.`);
-  }
+  setStatus(song.capo
+    ? `Loaded chart with ${allChords().length} chords (written for capo ${song.capo}).`
+    : `Loaded chart with ${allChords().length} chords.`);
   renderAll();
 }
 
 // ── Lyrics ──────────────────────────────────────────────────
 
-async function fetchLyrics(quiet) {
+const LYRICS_TIMEOUT_MS = 10000;
+
+async function lrclibGet(path, params) {
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), LYRICS_TIMEOUT_MS);
+  try {
+    const r = await fetch(`${LRCLIB}/${path}?${params}`, { signal: ctrl.signal });
+    if (r.status === 404) return null;
+    if (!r.ok) throw new Error(`LRCLIB returned HTTP ${r.status}`);
+    return await r.json();
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+/** Lower is better: closeness in duration first, synced lyrics as a tie-breaker. */
+function lyricsScore(rec) {
+  const d = song.duration && rec.duration ? Math.abs(rec.duration - song.duration) : 0;
+  return Math.min(d, 60) + (rec.syncedLyrics ? 0 : 3);
+}
+
+// Sends only the artist, title and (for audio) duration typed in the fields
+// above, and only when the user presses "Find synced lyrics".
+async function fetchLyrics() {
   const artist = $('meta-artist').value.trim();
   const title = $('meta-title').value.trim();
   if (!title) { setStatus('Enter a song title (and ideally the artist) to look up lyrics.', true); return; }
+  const token = ++lyricsToken;
   const btn = $('lyrics-fetch-btn');
   btn.disabled = true;
-  if (!quiet) setStatus('Looking up lyrics on LRCLIB…');
+  setStatus('Looking up lyrics on LRCLIB…');
   try {
     let rec = null;
     if (artist) {
       const p = new URLSearchParams({ artist_name: artist, track_name: title });
       if (song.duration) p.set('duration', String(Math.round(song.duration)));
-      const r = await fetch(`${LRCLIB}/get?${p}`);
-      if (r.ok) rec = await r.json();
+      rec = await lrclibGet('get', p);
     }
     if (!rec || (!rec.syncedLyrics && !rec.plainLyrics)) {
       const p = new URLSearchParams({ track_name: title });
       if (artist) p.set('artist_name', artist);
-      const r = await fetch(`${LRCLIB}/search?${p}`);
-      const list = r.ok ? await r.json() : [];
-      if (Array.isArray(list) && list.length) {
-        const score = (x) => (x.syncedLyrics ? 0 : 1000) + (song.duration && x.duration ? Math.abs(x.duration - song.duration) : 0);
-        rec = list.slice().sort((a, b) => score(a) - score(b))[0];
-      }
+      const list = (await lrclibGet('search', p)) || [];
+      // Skip versions whose length is far from this recording (live cuts, edits)
+      const usable = (Array.isArray(list) ? list : [])
+        .filter(x => x.syncedLyrics || x.plainLyrics)
+        .filter(x => !song.duration || !x.duration || Math.abs(x.duration - song.duration) <= 15);
+      rec = usable.sort((a, b) => lyricsScore(a) - lyricsScore(b))[0] || null;
     }
+    if (token !== lyricsToken) return; // a different song was loaded meanwhile
     if (!rec || (!rec.syncedLyrics && !rec.plainLyrics)) {
-      setStatus(`No lyrics found for “${title}”. You can paste them instead.`, !quiet);
+      setStatus(`No lyrics found for “${title}”. You can paste them instead.`);
       return;
     }
     song.lyrics = parseLrc(rec.syncedLyrics || rec.plainLyrics);
@@ -405,9 +478,12 @@ async function fetchLyrics(quiet) {
     renderAll();
   } catch (err) {
     console.error(err);
-    setStatus('Lyrics lookup failed (are you offline?). You can paste lyrics instead.', true);
+    if (token !== lyricsToken) return;
+    setStatus(err.name === 'AbortError'
+      ? 'LRCLIB did not respond in time. Try again, or paste lyrics instead.'
+      : `Lyrics lookup failed (${err.message || 'network error'}). You can paste lyrics instead.`, true);
   } finally {
-    btn.disabled = false;
+    if (token === lyricsToken) btn.disabled = false;
   }
 }
 
@@ -466,7 +542,9 @@ function commitSegEdit(input) {
 function exportChordPro() {
   const rows = currentRows();
   const k = playKey();
-  const capo = song.source === 'audio' && song.transpose < 0 ? -song.transpose : null;
+  const capo = song.source === 'audio'
+    ? (song.transpose < 0 ? -song.transpose : null)
+    : (song.capo || null);
   const tuningName = isBaritone() ? 'baritone DGBE' : (isLowG() ? 'low-G gCEA' : 'standard GCEA');
   const meta = {
     title: $('meta-title').value.trim(),
@@ -476,7 +554,9 @@ function exportChordPro() {
     tuning: tuningName,
   };
   const segs = song.segments.map(s => ({ start: s.start, end: s.end, label: labelFor(s.chord) }));
-  const text = toChordPro(meta, rows, segs);
+  // Untimed lyrics can't carry chords, but they still belong in the file
+  const plain = !rows && song.lyrics.length ? song.lyrics.map(l => l.text) : null;
+  const text = toChordPro(meta, rows, segs, plain);
   const blob = new Blob([text], { type: 'text/plain' });
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
@@ -529,15 +609,15 @@ document.addEventListener('DOMContentLoaded', () => {
     const f = e.dataTransfer.files && e.dataTransfer.files[0];
     if (f) loadAudioFile(f);
   });
-  $('reanalyze-btn').addEventListener('click', analyze);
-  $('opt-sevenths').addEventListener('change', () => { if (song.pcm) analyze(); });
-  $('opt-smoothing').addEventListener('change', () => { if (song.pcm) analyze(); });
+  $('reanalyze-btn').addEventListener('click', () => { if (song.source === 'audio') analyze(); });
+  $('opt-sevenths').addEventListener('change', () => { if (song.source === 'audio') analyze(); });
+  $('opt-smoothing').addEventListener('change', () => { if (song.source === 'audio') analyze(); });
 
   // Sheet
   $('sheet-load-btn').addEventListener('click', loadSheet);
 
   // Lyrics
-  $('lyrics-fetch-btn').addEventListener('click', () => fetchLyrics(false));
+  $('lyrics-fetch-btn').addEventListener('click', fetchLyrics);
   $('lyrics-apply-btn').addEventListener('click', applyPastedLyrics);
   $('lyrics-offset').addEventListener('change', e => {
     song.lyricOffset = parseFloat(e.target.value) || 0;

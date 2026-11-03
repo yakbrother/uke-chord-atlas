@@ -46,7 +46,8 @@ function pitchClassOf(name) {
 function parseChordName(str) {
   if (typeof str !== 'string') return null;
   const s = str.trim();
-  const m = s.match(/^([A-G](?:#|b)?)([^/\s]*)(?:\/([A-G](?:#|b)?))?$/);
+  // "6/9" is a quality, not a slash chord, so allow it explicitly before the bass part
+  const m = s.match(/^([A-G](?:#|b)?)((?:m?6\/9)|[^/\s]*)(?:\/([A-G](?:#|b)?))?$/);
   if (!m) return null;
   const root = pitchClassOf(m[1]);
   if (root < 0) return null;
@@ -54,7 +55,7 @@ function parseChordName(str) {
   // Allow a known set of "valid but undiagrammed" qualities so lyrics words
   // like "Am" still parse while "Amazing" does not.
   const known = Object.prototype.hasOwnProperty.call(CHORD_SUFFIXES, suffix);
-  const otherOk = /^(dim7?|°7?|o7?|aug|\+|m7b5|ø7?|7b9|7#9|7#5|7b5|11|13|m11|m6|maj13|5|7#11|add4|sus2sus4)$/.test(suffix);
+  const otherOk = /^(dim7?|°7?|o7?|aug|\+|m7b5|ø7?|m6\/9|7b9|7#9|7#5|7b5|11|13|m11|m6|maj13|5|7#11|add4|sus2sus4)$/.test(suffix);
   if (!known && !otherOk) return null;
   const bass = m[3] ? pitchClassOf(m[3]) : null;
   return { root, typeId: known ? CHORD_SUFFIXES[suffix] : null, suffix, bass };
@@ -244,7 +245,7 @@ function chordLineFor(row) {
 
 // ── ChordPro ────────────────────────────────────────────────
 
-function toChordPro(meta, rows, segments) {
+function toChordPro(meta, rows, segments, plainLines) {
   const out = [];
   if (meta.title) out.push(`{title: ${meta.title}}`);
   if (meta.artist) out.push(`{artist: ${meta.artist}}`);
@@ -256,7 +257,9 @@ function toChordPro(meta, rows, segments) {
     for (const row of rows) {
       let text = row.text;
       // Insert from the end so earlier positions stay valid
-      const cs = row.chords.slice().sort((a, b) => b.pos - a.pos);
+      // Insert right-to-left; for chords sharing a position, insert the later
+      // one first so [C][G] keeps its original order.
+      const cs = row.chords.map((c, i) => ({ c, i })).sort((a, b) => b.c.pos - a.c.pos || b.i - a.i).map(x => x.c);
       for (const c of cs) {
         const p = Math.min(c.pos, text.length);
         const pad = c.pos > text.length ? ' '.repeat(c.pos - text.length) : '';
@@ -268,6 +271,10 @@ function toChordPro(meta, rows, segments) {
     // No synced lyrics: emit the progression, four chords per line
     const labels = segments.filter(s => s.label).map(s => `[${s.label}]`);
     for (let i = 0; i < labels.length; i += 4) out.push(labels.slice(i, i + 4).join(' '));
+    if (plainLines && plainLines.length) {
+      out.push('', '{comment: Lyrics (not synced to the chords)}');
+      out.push(...plainLines);
+    }
   }
   return out.join('\n') + '\n';
 }
@@ -333,6 +340,13 @@ function parseChordSheet(text) {
 
 const MINORISH = new Set(['min', 'm7', 'm9', 'mmaj7']);
 
+/** Minor-quality chord? Also covers undiagrammed spellings like m6, m11, m7b5. */
+function isMinorChord(c) {
+  if (!c) return false;
+  if (MINORISH.has(c.typeId)) return true;
+  return typeof c.suffix === 'string' && /^(m(?!aj)|min|-)/.test(c.suffix);
+}
+
 /**
  * Guess the key of a chord list: the major key whose diatonic triads
  * (I ii iii IV V vi) cover the most chords, with a bonus when the song
@@ -344,13 +358,13 @@ function guessKeyFromChords(chords) {
   if (!valid.length) return null;
   const majDeg = [[0, false], [2, true], [4, true], [5, false], [7, false], [9, true]];
   const first = valid[0], last = valid[valid.length - 1];
-  const isTonic = (c, k) => c.root === k && !MINORISH.has(c.typeId);
-  const isRelMinor = (c, k) => c.root === (k + 9) % 12 && MINORISH.has(c.typeId);
+  const isTonic = (c, k) => c.root === k && !isMinorChord(c);
+  const isRelMinor = (c, k) => c.root === (k + 9) % 12 && isMinorChord(c);
   let best = 0, bestScore = -1;
   for (let k = 0; k < 12; k++) {
     let score = 0;
     for (const c of valid) {
-      if (majDeg.some(([d, minor]) => (k + d) % 12 === c.root && minor === MINORISH.has(c.typeId))) score += 1;
+      if (majDeg.some(([d, minor]) => (k + d) % 12 === c.root && minor === isMinorChord(c))) score += 1;
     }
     for (const c of [first, last]) if (isTonic(c, k) || isRelMinor(c, k)) score += 1.5;
     if (score > bestScore) { bestScore = score; best = k; }
@@ -380,6 +394,6 @@ if (typeof module !== 'undefined' && module.exports) {
     parseChordName, formatChord, transposeChord, transposeChordName, useFlatsFor,
     voicingDifficulty, easiestVoicings, rankTranspositions, parseLrc,
     alignChordsToLyrics, chordLineFor, toChordPro, isChordLine, parseChordSheet,
-    guessKeyFromChords, guessMetaFromFilename, formatTime,
+    guessKeyFromChords, isMinorChord, guessMetaFromFilename, formatTime,
   };
 }

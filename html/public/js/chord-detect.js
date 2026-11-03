@@ -349,7 +349,7 @@ function estimateKey(chromaFrames) {
  * @param {Float32Array[]} channels
  * @param {number} sampleRate
  * @param {object} [opts] overrides for DETECT_DEFAULTS
- * @returns {{ segments: Array<{start,end,root,type}>, key, tuningCents, duration }}
+ * @returns {{ segments: Array<{start,end,root,type}>, key: {root,mode,confidence}|null, tuningCents, duration }}
  */
 function detectChords(channels, sampleRate, opts) {
   const o = Object.assign({}, DETECT_DEFAULTS, opts);
@@ -366,7 +366,7 @@ function detectChords(channels, sampleRate, opts) {
   const voiced = chroma.filter((_, t) => cg.energyDb[t] >= o.silenceDb);
   return {
     segments,
-    key: estimateKey(voiced.length ? voiced : chroma),
+    key: voiced.length ? estimateKey(voiced) : null, // no tonal content → no key
     tuningCents: cg.tuningCents,
     duration,
   };
