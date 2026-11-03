@@ -425,6 +425,12 @@ legend {
   .site-nav a { flex: 1 1 0; text-align: center; padding: 8px 4px; letter-spacing: 1.5px; font-size: 12px; }
 }
 
+/* Touch screens: finger-sized nav and tuning buttons */
+@media (pointer: coarse) {
+  .tuning-btn { min-height: 44px; }
+  .site-nav a { min-height: 44px; display: flex; align-items: center; justify-content: center; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   * { transition: none !important; animation: none !important; }
 }

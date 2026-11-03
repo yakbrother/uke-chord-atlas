@@ -367,7 +367,8 @@ function probeDuration(file) {
       URL.revokeObjectURL(url);
       resolve(d);
     };
-    const timer = setTimeout(() => finish(NaN), 5000);
+    // iOS may not load metadata for a file it isn't playing; don't stall on it
+    const timer = setTimeout(() => finish(NaN), 2000);
     probe.preload = 'metadata';
     probe.addEventListener('loadedmetadata', () => finish(probe.duration));
     probe.addEventListener('error', () => finish(NaN)); // let decodeAudioData decide

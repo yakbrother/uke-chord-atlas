@@ -64,7 +64,7 @@
 }
 .field input, .field-label + textarea {
   font-family: 'Jost', sans-serif;
-  font-size: 15px;
+  font-size: 16px; /* under 16px, iOS Safari zooms the page when the field is focused */
   letter-spacing: 0;
   text-transform: none;
   padding: 8px 10px;
@@ -135,7 +135,7 @@
 .sheet-input {
   width: 100%;
   font-family: ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
-  font-size: 14px;
+  font-size: 16px; /* avoids iOS zoom-on-focus */
   line-height: 1.45;
   padding: 10px 12px;
   border: 1px solid var(--border);
@@ -158,6 +158,11 @@
 
 /* Key & transpose */
 .song-controls { position: sticky; top: 0; z-index: 20; box-shadow: 0 6px 12px -10px rgba(0,0,0,0.4); }
+/* On phones (and any short screen, e.g. a phone in landscape) the sticky panel
+   would cover a third to half of the view, hiding the Now/Next diagrams. */
+@media (max-width: 599px), (max-height: 699px) {
+  .song-controls { position: static; box-shadow: none; }
+}
 .key-line { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 18px; }
 .key-box { display: flex; flex-direction: column; }
 .key-caption { font-size: 11px; letter-spacing: 2px; text-transform: uppercase; color: var(--text-muted); }
@@ -266,6 +271,15 @@
   .transpose { margin-left: 0; }
   .now .nn-diagram svg { width: 132px; height: 180px; }
   .sheet { font-size: 13px; }
+}
+
+/* Touch screens: give small controls a finger-sized hit area (~44px) */
+@media (pointer: coarse) {
+  .btn, .source-tab { min-height: 44px; }
+  .check { min-height: 44px; }
+  .lyrics-paste summary { min-height: 44px; display: flex; align-items: center; }
+  .seg { min-height: 48px; min-width: 60px; }
+  .chord-card:hover { transform: none; } /* no sticky hover lift after a tap */
 }
 
 @media (prefers-reduced-motion: reduce) {
