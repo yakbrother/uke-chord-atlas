@@ -19,6 +19,20 @@ A zero-dependency web app for exploring ukulele chord voicings and identifying c
 - **Alternate interpretations** — lists all matching chord names ranked by simplicity
 - **Interval formula display** — shows the intervals (1 3 5 b7, etc.) for each match
 
+### Song Lab (song.html)
+
+Play along with real songs on any tuning, built around the **baritone (DGBE)** uke.
+
+- **Chord detection from audio.** Drop in an MP3/M4A/WAV and it detects the chords entirely in your browser; the audio never leaves your device. The pipeline is chromagram, then tuning correction, then chord-template matching, then Viterbi smoothing. It also estimates the key and reports when a recording is tuned sharp or flat.
+- **Transposition** by semitone, plus **Easiest shapes** (the key with the easiest voicings for the current tuning) and **Easiest with a capo** (keeps the original key so you can play along with the recording).
+- **Diagrams** for every chord in the song in the current tuning; tap one for another voicing. A large Now/Next diagram follows playback.
+- **Synced lyrics** from [LRCLIB](https://lrclib.net) by artist and title (guessed from the file name), or paste LRC or plain lyrics. Chords are placed above the words at the time they change. Click a line to jump there.
+- **Fix chords**: correct any wrong detection inline.
+- **Paste a chord chart** (ChordPro `[C]` brackets or chords above lyrics) to transpose it and see diagrams without any audio.
+- **Download ChordPro** or print the sheet.
+
+Detection handles major and minor triads by default (7ths are optional). It works best on recordings where the harmony is clear, and it's meant as a starting point, not a perfect transcription.
+
 ### Shared
 
 - **Light and dark themes** — follows your system preference and remembers your choice
@@ -60,7 +74,12 @@ html/public/
     theme.js            Light/dark theme toggle
     atlas.js            Atlas page logic and event wiring
     identify.js         Fretboard interaction and result rendering
+    chord-detect.js     Audio → chords (FFT, chroma, templates, Viterbi, key)
+    song-utils.js       Chord parsing/transposition, LRC, ChordPro, voicing choice
+    song.js             Song Lab page logic
 ```
+
+Run the tests with `npm test`.
 
 The original single-file version is preserved at `uke-chord-atlas.html` in the project root.
 
