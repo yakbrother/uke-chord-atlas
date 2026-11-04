@@ -40,6 +40,7 @@
   fill: none;
   stroke: var(--diagram-open);
   stroke-width: 1.8;
+  pointer-events: none;
 }
 .fb-open-ring.fb-selected {
   fill: var(--diagram-open);
@@ -59,11 +60,21 @@
   opacity: 0.4;
 }
 
-/* Finger dots */
+/* Finger dots: tap to remove, drag to move */
+.fb-dot-g {
+  cursor: grab;
+  touch-action: none; /* hint; identify.js also blocks touchmove scrolling while dragging */
+  outline: none;
+}
 .fb-dot {
   fill: var(--diagram-dot);
   transition: r 0.08s;
 }
+.fb-dot-g:hover .fb-dot { fill: color-mix(in srgb, var(--diagram-dot) 80%, #c0392b); }
+.fb-dot-g:focus-visible .fb-dot { stroke: var(--focus); stroke-width: 3; }
+.fb-dot-g.fb-dragging { cursor: grabbing; }
+.fb-dot-g.fb-dragging .fb-dot { r: 15px; opacity: 0.85; }
+#fretboard-svg:focus { outline: none; }
 .fb-dot-text {
   fill: var(--diagram-dot-text);
   font-size: 9px;
@@ -98,6 +109,14 @@
   margin-top: 10px;
   transition: background 0.1s, color 0.1s;
 }
+.fb-hint {
+  font-size: 13px;
+  color: var(--text-muted);
+  margin-top: 8px;
+  max-width: 36ch;
+  line-height: 1.4;
+}
+
 .clear-btn:hover {
   background: var(--surface-2);
   color: var(--text);

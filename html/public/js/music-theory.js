@@ -179,10 +179,11 @@ function identifyChord(frets) {
   const uniqueNotes = [...new Set(notes)];
   const results = [];
 
-  // Bass note: use approximate MIDI pitches for the current tuning.
-  // Standard GCEA: G4=55, C4=48, E4=52, A4=57
-  // Baritone DGBE: D3=50, G3=43, B3=47, E4=52
-  const pitches = isBaritone() ? [50, 43, 47, 52] : [55, 48, 52, 57];
+  // Bass note: the lowest-sounding string, from real open-string MIDI pitches.
+  // Standard (re-entrant) gCEA: G4=67, C4=60, E4=64, A4=69
+  // Low-G GCEA:                 G3=55, C4=60, E4=64, A4=69
+  // Baritone DGBE (linear):     D3=50, G3=55, B3=59, E4=64
+  const pitches = isBaritone() ? [50, 55, 59, 64] : (isLowG() ? [55, 60, 64, 69] : [67, 60, 64, 69]);
   let bassIdx = 0;
   let bassPitch = Infinity;
   for (let i = 0; i < 4; i++) {
@@ -325,9 +326,12 @@ function getProgressionSuggestions(root, typeId) {
   const isMinor = typeId === 'min' || typeId === 'm7' || typeId === 'm9' || typeId === 'mmaj7';
   const suggestions = [];
 
+  const scale = isMinor ? MINOR_SCALE : MAJOR_SCALE;
+
   for (const pattern of PROGRESSION_PATTERNS) {
     const chords = pattern.pattern.map(degree => {
-      const chordRoot = (root + degree - 1) % 12;
+      // Scale degree → semitones via the scale (not degree - 1 semitones)
+      const chordRoot = (root + scale[degree - 1]) % 12;
       const chordType = getChordTypeForDegree(degree, isMinor);
       const rootName = rootNoteName(chordRoot);
       const label = chordType === 'maj' ? rootName : rootName + chordType;
