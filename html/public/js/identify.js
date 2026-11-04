@@ -39,23 +39,17 @@ function updateUrl() {
 
 // ── Fretboard SVG ───────────────────────────────────────────
 
-const STRINGS = 4;
-const FB = {
-  leftMargin: 42,  // room for fret numbers
-  topMargin: 36,   // room for open-string note labels
-  cellW: 52,       // horizontal spacing between strings
-  cellH: 38,       // vertical spacing between frets
-  rightPad: 20,
-  bottomPad: 28,   // room for string names
-};
-FB.gridW = (STRINGS - 1) * FB.cellW;
-FB.gridH = MAX_FRET * FB.cellH;
-FB.W = FB.leftMargin + FB.gridW + FB.rightPad;
-FB.H = FB.topMargin + FB.gridH + FB.bottomPad;
+// Geometry and the move rules live in fretboard-model.js (unit tested)
+const FB = FRETBOARD_GEOMETRY;
+const STRINGS = FB.strings;
+const stringX = (s) => fbStringX(s);
+const fretY = (f) => fbFretY(f);
+const OPEN_Y = FB.openY;
 
-const stringX = (s) => FB.leftMargin + s * FB.cellW;
-const fretY = (f) => FB.topMargin + (f - 0.5) * FB.cellH; // centre of fret f (f >= 1)
-const OPEN_Y = FB.topMargin - 16;
+/** Replace the selection in place (selectedFrets is shared, so keep the same array). */
+function setFrets(next) {
+  for (let i = 0; i < STRINGS; i++) selectedFrets[i] = next[i];
+}
 
 /** Static board: background, frets, strings, markers, labels, hover cells. */
 function renderFretboard() {
@@ -167,28 +161,24 @@ let drag = null;     // { s, f, x0, y0, moved, pointerId } while dragging a dot
 let pending = null;  // { s, f, x0, y0, pointerId } tap on an empty cell, placed on release
 const DRAG_THRESHOLD = 6; // px before a press on a dot becomes a drag
 
-/** Map a pointer event to { s, f } (f = 0 above the nut), or null if off the board. */
-function cellFromEvent(e) {
+/** Pointer position in SVG coordinates. */
+function svgPoint(e) {
   const svg = document.getElementById('fretboard-svg');
   const pt = svg.createSVGPoint();
   pt.x = e.clientX; pt.y = e.clientY;
-  const p = pt.matrixTransform(svg.getScreenCTM().inverse());
-  const s = Math.round((p.x - FB.leftMargin) / FB.cellW);
-  if (s < 0 || s >= STRINGS || Math.abs(p.x - stringX(s)) > FB.cellW / 2) return null;
-  if (p.y < OPEN_Y - 16 || p.y > FB.topMargin + FB.gridH) return null;
-  const f = p.y < FB.topMargin ? 0 : Math.min(MAX_FRET, Math.max(1, Math.ceil((p.y - FB.topMargin) / FB.cellH)));
-  return { s, f };
+  return pt.matrixTransform(svg.getScreenCTM().inverse());
 }
 
-/** Clamp a drag position to the board (drags may wander off it). */
+/** Cell under the pointer, or null if off the board. */
+function cellFromEvent(e) {
+  const p = svgPoint(e);
+  return fbCellAt(p.x, p.y, false);
+}
+
+/** Cell under the pointer, snapped onto the board (drags may wander off it). */
 function clampedCell(e) {
-  const svg = document.getElementById('fretboard-svg');
-  const pt = svg.createSVGPoint();
-  pt.x = e.clientX; pt.y = e.clientY;
-  const p = pt.matrixTransform(svg.getScreenCTM().inverse());
-  const s = Math.min(STRINGS - 1, Math.max(0, Math.round((p.x - FB.leftMargin) / FB.cellW)));
-  const f = p.y < FB.topMargin ? 0 : Math.min(MAX_FRET, Math.max(1, Math.ceil((p.y - FB.topMargin) / FB.cellH)));
-  return { s, f };
+  const p = svgPoint(e);
+  return fbCellAt(p.x, p.y, true);
 }
 
 function commit(focusString) {
@@ -203,7 +193,7 @@ function onPointerDown(e) {
   pending = null;     // every new press starts a fresh gesture
   const cell = cellFromEvent(e);
   if (!cell) return;
-  if (cell.f > 0 && selectedFrets[cell.s] === cell.f) {
+  if (fbIsDot(selectedFrets, cell)) {
     // Pressed a finger dot: could be a tap (remove) or the start of a drag
     drag = { s: cell.s, f: cell.f, x0: e.clientX, y0: e.clientY, moved: false, pointerId: e.pointerId };
     e.currentTarget.setPointerCapture(e.pointerId);
@@ -223,14 +213,11 @@ function onPointerMove(e) {
   if (!drag || drag.pointerId !== e.pointerId) return;
   if (!drag.moved && Math.hypot(e.clientX - drag.x0, e.clientY - drag.y0) < DRAG_THRESHOLD) return;
   drag.moved = true;
-  const to = clampedCell(e);
-  // A string that already has a finger can't take another: stay on the current string
-  if (to.s !== drag.s && selectedFrets[to.s] > 0) to.s = drag.s;
-  if (to.s === drag.s && to.f === drag.f) { renderDots(); return; }
-  if (to.s !== drag.s) selectedFrets[drag.s] = 0; // finger leaves its old string
-  selectedFrets[to.s] = to.f;
-  drag.s = to.s; drag.f = to.f;
-  if (to.f === 0) {
+  const { frets, at } = fbDragTo(selectedFrets, drag, clampedCell(e));
+  if (at.s === drag.s && at.f === drag.f) { renderDots(); return; }
+  setFrets(frets);
+  drag.s = at.s; drag.f = at.f;
+  if (at.f === 0) {
     // Dragged above the nut: the string is now open and there is no dot left to drag
     drag = null;
   }
@@ -242,7 +229,7 @@ function onPointerUp(e) {
     // Browsers can coalesce away the last move before release; apply the release point too
     if (drag.moved || Math.hypot(e.clientX - drag.x0, e.clientY - drag.y0) >= DRAG_THRESHOLD) onPointerMove(e);
     if (!drag) return; // the final move dropped it above the nut
-    if (!drag.moved) selectedFrets[drag.s] = 0; // a tap on a dot removes it
+    if (!drag.moved) setFrets(fbRemove(selectedFrets, drag.s)); // a tap on a dot removes it
     drag = null;
     commit();
     return;
@@ -250,7 +237,7 @@ function onPointerUp(e) {
   if (pending && pending.pointerId === e.pointerId) {
     const cell = cellFromEvent(e);
     if (cell && cell.s === pending.s && cell.f === pending.f) {
-      selectedFrets[cell.s] = cell.f; // place (or set the string open from the top row)
+      setFrets(fbPlace(selectedFrets, cell.s, cell.f)); // place (or set the string open from the top row)
       commit();
     }
     pending = null;
@@ -262,42 +249,16 @@ function onPointerCancel(e) {
   if (pending && pending.pointerId === e.pointerId) pending = null;
 }
 
-/** Keyboard control for a focused dot. */
+/** Keyboard control for a focused dot (rules in fbKeyAction). */
 function onDotKey(e) {
   const dot = e.target.closest && e.target.closest('.fb-dot-g');
   if (!dot) return;
-  const s = parseInt(dot.dataset.string, 10);
-  const f = selectedFrets[s];
-  let focus = s;
-  switch (e.key) {
-    case 'Delete': case 'Backspace': case 'Enter': case ' ':
-      selectedFrets[s] = 0;
-      focus = undefined;
-      break;
-    case 'ArrowUp':
-      selectedFrets[s] = f - 1; // fret 1 → open
-      if (selectedFrets[s] === 0) focus = undefined;
-      break;
-    case 'ArrowDown':
-      selectedFrets[s] = Math.min(MAX_FRET, f + 1);
-      break;
-    case 'ArrowLeft': case 'ArrowRight': {
-      // Move to the nearest string in that direction that has no finger on it
-      const step = e.key === 'ArrowLeft' ? -1 : 1;
-      let t = s + step;
-      while (t >= 0 && t < STRINGS && selectedFrets[t] > 0) t += step;
-      if (t < 0 || t >= STRINGS) { e.preventDefault(); return; }
-      selectedFrets[s] = 0;
-      selectedFrets[t] = f;
-      focus = t;
-      break;
-    }
-    default:
-      return;
-  }
+  const result = fbKeyAction(selectedFrets, parseInt(dot.dataset.string, 10), e.key, MAX_FRET);
+  if (!result) return;
   e.preventDefault();
-  commit(focus);
-  if (focus === undefined) document.getElementById('fretboard-svg').focus();
+  setFrets(result.frets);
+  commit(result.focus === null ? undefined : result.focus);
+  if (result.focus === null) document.getElementById('fretboard-svg').focus();
 }
 
 function clearFretboard() {
